@@ -85,6 +85,16 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 .note{font-size:13px;color:var(--mute);margin-top:8px}
 .pill{display:inline-block;padding:2px 9px;border-radius:99px;font-size:12px;font-weight:700;color:#fff}
 .hide{display:none}
+.sens{display:grid;grid-template-columns:1fr auto 26px;gap:6px;align-items:center;margin-top:6px;font-size:12.5px}
+.sens input{padding:5px 7px;font-size:13px}.sens button{border:0;background:#eadfd9;border-radius:6px;cursor:pointer;height:28px;color:#7a2416;font-weight:700}
+button.ghost.on{background:var(--st);color:#fff;border-color:var(--st)}
+#chatLog{max-height:340px;overflow:auto;display:flex;flex-direction:column;gap:8px;margin-bottom:10px}
+.msg{padding:9px 12px;border-radius:10px;max-width:88%;font-size:14.5px;white-space:pre-wrap}
+.msg.user{align-self:flex-end;background:var(--accent);color:#fff}.msg.model{align-self:flex-start;background:#eef4ee;border:1px solid #d5e4d8}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}.chips button{border:1px solid #cfd9d0;background:#fff;border-radius:99px;padding:5px 11px;font:inherit;font-size:12.5px;cursor:pointer;color:var(--accent)}
+.chatrow{display:grid;grid-template-columns:1fr 90px;gap:8px}.chatrow button{border:0;border-radius:8px;background:var(--accent);color:#fff;font:inherit;font-weight:600;cursor:pointer}
+.warn{font-size:12.5px;color:#7a4b00;background:var(--ca-bg);border-radius:6px;padding:5px 7px;margin-top:6px}
+.frm{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px}
 .err{background:var(--st-bg);border:1px solid #e3a99d;color:#7a2416;padding:12px;border-radius:8px;margin-bottom:14px}
 svg text{font:11px "Segoe UI",system-ui,sans-serif;fill:#5d6b62}
 .spin{display:inline-block;width:14px;height:14px;border:2px solid #fff;border-top-color:transparent;border-radius:50%;animation:r 0.8s linear infinite;vertical-align:-2px;margin-right:6px}
@@ -98,6 +108,7 @@ svg text{font:11px "Segoe UI",system-ui,sans-serif;fill:#5d6b62}
 </header>
 <nav>
   <button data-tab="fc" class="on">Spray forecast</button>
+  <button data-tab="rec">Spray records</button>
   <button data-tab="acc">Accuracy</button>
   <button data-tab="log">Decision log</button>
   <button data-tab="ai">AI &amp; cost</button>
@@ -114,12 +125,24 @@ svg text{font:11px "Segoe UI",system-ui,sans-serif;fill:#5d6b62}
      <div class="row2"><div><label>Latitude</label><input id="lat" type="number" step="0.0001"></div><div><label>Longitude</label><input id="lon" type="number" step="0.0001"></div></div>
      <div id="near" class="note"></div>
    </div>
+   <div class="card"><h2>Crop and product</h2>
+     <label>Crop in this field</label>
+     <select id="crop"><option value="">Choose…</option><option>Lettuce</option><option>Spinach / leafy greens</option><option>Broccoli</option><option>Cauliflower</option><option>Cabbage</option><option>Celery</option><option>Melons</option><option>Cotton</option><option>Durum wheat</option><option>Alfalfa</option><option>Citrus</option><option>Dates</option><option>Other</option></select>
+     <label>Pesticide type</label>
+     <select id="ptype"><option value="">Choose…</option><option>Herbicide</option><option>Insecticide</option><option>Fungicide</option><option>Growth regulator / defoliant</option><option>Other</option></select>
+     <div class="row2"><div><label>Product name (optional)</label><input id="product" type="text" placeholder="as on the label"></div>
+     <div><label>Volatility</label><select id="vol"><option value="">Not sure</option><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option></select></div></div>
+     <div class="note">Herbicides: wind toward a sensitive area becomes Stop. High volatility: extra caution in heat (85°F+) and when an inversion may follow.</div>
+   </div>
+   <div class="card"><h2>Sensitive areas nearby</h2>
+     <button class="ghost" id="sensBtn" style="width:100%">+ Add areas by clicking the map</button>
+     <div id="sensList"></div>
+     <div class="note">Mark neighboring crops, homes, schools or water. Add as many as you need.</div>
+   </div>
    <div class="card"><h2>Spray limits</h2>
      <div class="row2"><div><label>Min wind (mph)</label><input id="wmin" type="number" value="3" step="0.5"></div><div><label>Max wind (mph)</label><input id="wmax" type="number" value="10" step="0.5"></div></div>
      <label>Confidence needed for "Go"</label>
      <select id="conf"><option value="0.6">60%</option><option value="0.7" selected>70%</option><option value="0.8">80%</option><option value="0.9">90%</option></select>
-     <label>Sensitive area next to the field (crops, homes, water)</label>
-     <select id="avoid"><option value="none">None marked</option><option value="0">North side</option><option value="45">North-east</option><option value="90">East side</option><option value="135">South-east</option><option value="180">South side</option><option value="225">South-west</option><option value="270">West side</option><option value="315">North-west</option></select>
      <button class="primary" id="go">Update forecast</button>
      <div class="note">3–10 mph is common guidance. The product label always governs.</div>
    </div>
@@ -127,6 +150,10 @@ svg text{font:11px "Segoe UI",system-ui,sans-serif;fill:#5d6b62}
   <div>
    <div class="card now" id="now"></div>
    <div class="card"><h2>Advice</h2><div class="advice" id="advice"></div></div>
+   <div class="card"><h2>Ask the advisor <span id="gemBadge" style="text-transform:none;letter-spacing:0;font-weight:500"></span></h2>
+     <div class="chips" id="chips"></div><div id="chatLog"></div>
+     <div class="chatrow"><input id="chatIn" type="text" placeholder="Ask about spray timing, the reasons, or your past sprays…"><button id="chatSend">Ask</button></div>
+     <div class="note">The advisor is Google Gemini. It sees this forecast, the station readings, the accuracy results and your spray records.</div></div>
    <div class="card"><h2>Safe spray windows · next 72 hours</h2><div class="slots" id="slots"></div></div>
    <div class="card"><h2>Hour by hour</h2><div class="strip" id="strip"></div>
      <div class="legend"><span><i style="background:var(--go)"></i>Go</span><span><i style="background:var(--ca)"></i>Caution</span><span><i style="background:var(--st)"></i>Stop</span><span>Number in each cell = confidence %. Click an hour for the reasons.</span></div>
@@ -140,12 +167,25 @@ svg text{font:11px "Segoe UI",system-ui,sans-serif;fill:#5d6b62}
 
 <section id="tab-acc" class="hide"></section>
 <section id="tab-log" class="hide"><div class="card"><h2>Time-stamped decision log</h2><p class="note" style="margin-top:0">Every forecast request is recorded with the readings and what triggered the status. <a href="/api/log.csv">Download CSV</a></p><div id="logTable" style="overflow:auto"></div></div></section>
+<section id="tab-rec" class="hide">
+ <div class="card"><h2>Record a spray</h2>
+  <div class="frm"><div><label>Field name</label><input id="rField" type="text" placeholder="e.g. North 40"></div><div><label>Start</label><input id="rStart" type="datetime-local"></div><div><label>End</label><input id="rEnd" type="datetime-local"></div>
+  <div><label>Outcome</label><select id="rOut"><option>Not known yet</option><option>No drift seen</option><option>Minor drift</option><option>Drift complaint</option></select></div></div>
+  <label>Notes</label><input id="rNotes" type="text" placeholder="nozzle, rate, anything worth remembering">
+  <div class="note" id="rCond"></div>
+  <button class="primary" id="rSave" style="max-width:260px">Save to spray records</button></div>
+ <div class="card"><h2>Past sprays (stored in the database)</h2><div id="recTable" style="overflow:auto"></div></div>
+</section>
 <section id="tab-ai" class="hide"></section>
 </main>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-const $=id=>document.getElementById(id), S={meta:null,data:null,sel:0,map:null,marker:null};
+const $=id=>document.getElementById(id), S={meta:null,data:null,sel:0,map:null,marker:null,sens:[],sensMode:false,sensLayers:[],chat:[]};
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function params(){return {lat:$('lat').value,lon:$('lon').value,wmin:$('wmin').value,wmax:$('wmax').value,conf:$('conf').value,crop:$('crop').value,ptype:$('ptype').value,product:$('product').value,vol:$('vol').value,sens:JSON.stringify(S.sens)}}
+function saveLocal(){try{localStorage.setItem('sw',JSON.stringify({crop:$('crop').value,ptype:$('ptype').value,product:$('product').value,vol:$('vol').value,sens:S.sens}))}catch(e){}}
+function loadLocal(){try{const o=JSON.parse(localStorage.getItem('sw')||'{}');['crop','ptype','product','vol'].forEach(k=>{if(o[k])$(k).value=o[k]});S.sens=o.sens||[]}catch(e){}}
 const f1=v=>v==null?'–':(+v).toFixed(1), f2=v=>v==null?'–':(+v).toFixed(2), pc=v=>v==null?'–':Math.round(v*100)+'%';
 const DAY=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'], MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const D=s=>new Date(s.replace(' ','T'));
@@ -156,7 +196,7 @@ function showErr(m){const e=$('err');if(!m){e.classList.add('hide');return}e.tex
 
 document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{
   document.querySelectorAll('nav button').forEach(x=>x.classList.toggle('on',x===b));
-  ['fc','acc','log','ai'].forEach(t=>$('tab-'+t).classList.toggle('hide',t!==b.dataset.tab));
+  ['fc','rec','acc','log','ai'].forEach(t=>$('tab-'+t).classList.toggle('hide',t!==b.dataset.tab)); if(b.dataset.tab==='rec')renderRec();
   if(b.dataset.tab==='log')loadLog(); if(b.dataset.tab==='ai')renderAI(); if(b.dataset.tab==='acc')renderAcc();
   if(b.dataset.tab==='fc'&&S.map&&S.map.invalidateSize)S.map.invalidateSize();
 });
@@ -164,7 +204,14 @@ document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{
 async function init(){
   try{S.meta=await (await fetch('/api/meta')).json()}catch(e){showErr('Cannot reach the app server.');return}
   $('lat').value=S.meta.default.lat; $('lon').value=S.meta.default.lon;
-  initMap(); $('go').onclick=load;
+  loadLocal(); initMap(); drawSens(); $('go').onclick=load;
+  ['crop','ptype','vol','product'].forEach(k=>$(k).onchange=()=>{saveLocal();load()});
+  $('sensBtn').onclick=()=>{S.sensMode=!S.sensMode;$('sensBtn').classList.toggle('on',S.sensMode);$('sensBtn').textContent=S.sensMode?'Click the map to add areas · click here when done':'+ Add areas by clicking the map'};
+  $('chatSend').onclick=()=>ask(); $('chatIn').onkeydown=e=>{if(e.key==='Enter')ask()};
+  $('chips').innerHTML=['When is my best window to spray?','Why this status right now?','Is tomorrow morning safe?','What do my past sprays show?'].map(q=>`<button>${q}</button>`).join('');
+  $('chips').querySelectorAll('button').forEach(b=>b.onclick=()=>ask(b.textContent));
+  $('gemBadge').textContent=S.meta.gemini&&S.meta.gemini.connected?'· Gemini connected':'· Gemini not connected (add key to gemini_key.txt)';
+  $('rSave').onclick=saveRec;
   $('lat').onchange=$('lon').onchange=()=>{moveMarker(+$('lat').value,+$('lon').value);load()};
   load();
 }
@@ -176,24 +223,33 @@ function initMap(){
     L.rectangle([[b.lat_min,b.lon_min],[b.lat_max,b.lon_max]],{color:'#1f5c3a',weight:1,fill:false,dashArray:'4'}).addTo(S.map);
     st.forEach(s=>L.circleMarker([s.lat,s.lon],{radius:6,color:'#1b5e9c',fillColor:'#3c8ad6',fillOpacity:.9,weight:2}).addTo(S.map).bindTooltip(s.name));
     S.marker=L.marker([S.meta.default.lat,S.meta.default.lon]).addTo(S.map);
-    S.map.on('click',e=>{setPoint(e.latlng.lat,e.latlng.lng)});
+    S.map.on('click',e=>{mapClick(e.latlng.lat,e.latlng.lng)});
   }else{ // offline fallback: simple drawn map
     const W=298,H=258,x=l=>(l-b.lon_min)/(b.lon_max-b.lon_min)*W,y=l=>H-(l-b.lat_min)/(b.lat_max-b.lat_min)*H;
-    const draw=()=>{$('map').innerHTML=`<svg width="100%" viewBox="0 0 ${W} ${H}" style="cursor:crosshair"><rect width="${W}" height="${H}" fill="#e4ecdf"/>${st.map(s=>`<circle cx="${x(s.lon)}" cy="${y(s.lat)}" r="5" fill="#3c8ad6"/><text x="${x(s.lon)+7}" y="${y(s.lat)+4}">${s.name}</text>`).join('')}<circle cx="${x(+$('lon').value)}" cy="${y(+$('lat').value)}" r="7" fill="#bf3f2a" stroke="#fff" stroke-width="2"/></svg>`;
-      $('map').firstChild.onclick=e=>{const r=e.currentTarget.getBoundingClientRect();setPoint(b.lat_min+(1-(e.clientY-r.top)/r.height)*(b.lat_max-b.lat_min),b.lon_min+(e.clientX-r.left)/r.width*(b.lon_max-b.lon_min))}};
+    const draw=()=>{$('map').innerHTML=`<svg width="100%" viewBox="0 0 ${W} ${H}" style="cursor:crosshair"><rect width="${W}" height="${H}" fill="#e4ecdf"/>${st.map(s=>`<circle cx="${x(s.lon)}" cy="${y(s.lat)}" r="5" fill="#3c8ad6"/><text x="${x(s.lon)+7}" y="${y(s.lat)+4}">${s.name}</text>`).join('')}${S.sens.map(a=>`<rect x="${x(a.lon)-5}" y="${y(a.lat)-5}" width="10" height="10" fill="#bf3f2a"/>`).join('')}<circle cx="${x(+$('lon').value)}" cy="${y(+$('lat').value)}" r="7" fill="#1f5c3a" stroke="#fff" stroke-width="2"/></svg>`;
+      $('map').firstChild.onclick=e=>{const r=e.currentTarget.getBoundingClientRect();mapClick(b.lat_min+(1-(e.clientY-r.top)/r.height)*(b.lat_max-b.lat_min),b.lon_min+(e.clientX-r.left)/r.width*(b.lon_max-b.lon_min))}};
     S.redraw=draw; draw();
   }
+}
+function mapClick(la,lo){if(S.sensMode){S.sens.push({lat:+la.toFixed(5),lon:+lo.toFixed(5),name:'Area '+(S.sens.length+1)});saveLocal();drawSens();load()}else setPoint(la,lo)}
+function drawSens(){
+  if(S.map){S.sensLayers.forEach(l=>S.map.removeLayer(l));S.sensLayers=S.sens.map(a=>L.circleMarker([a.lat,a.lon],{radius:8,color:'#8f2414',fillColor:'#bf3f2a',fillOpacity:.85,weight:2}).addTo(S.map).bindTooltip(a.name))}
+  if(S.redraw)S.redraw();
+  const info=(S.data&&S.data.sens)||[];
+  $('sensList').innerHTML=S.sens.map((a,i)=>`<div class="sens"><input data-i="${i}" value="${esc(a.name)}"><span>${info[i]?info[i].miles+' mi '+info[i].card:''}</span><button data-i="${i}" title="Remove">×</button></div>`).join('');
+  $('sensList').querySelectorAll('input').forEach(n=>n.onchange=()=>{S.sens[+n.dataset.i].name=n.value;saveLocal();drawSens();load()});
+  $('sensList').querySelectorAll('button').forEach(n=>n.onclick=()=>{S.sens.splice(+n.dataset.i,1);saveLocal();drawSens();load()});
 }
 function moveMarker(la,lo){if(S.marker)S.marker.setLatLng([la,lo]); if(S.redraw)S.redraw()}
 function setPoint(la,lo){$('lat').value=la.toFixed(4);$('lon').value=lo.toFixed(4);moveMarker(la,lo);load()}
 
 async function load(){
   showErr(''); $('go').innerHTML='<span class="spin"></span>Working…';
-  const q=new URLSearchParams({lat:$('lat').value,lon:$('lon').value,wmin:$('wmin').value,wmax:$('wmax').value,conf:$('conf').value,avoid:$('avoid').value});
+  const q=new URLSearchParams(params());
   try{
     const r=await fetch('/api/forecast?'+q), j=await r.json();
     if(!r.ok||j.error){showErr(j.error||'Forecast failed.');return}
-    S.data=j; S.sel=0; render();
+    S.data=j; S.sel=0; render(); drawSens();
   }catch(e){showErr('Forecast request failed: '+e)}finally{$('go').textContent='Update forecast'}
 }
 
@@ -203,14 +259,14 @@ function render(){
   b.className='badge'+(/SIMULATED|saved/.test(d.source)?' warn':'');
   $('near').innerHTML='Elevation '+(d.point.elev_m==null?'–':Math.round(d.point.elev_m*3.281)+' ft')+' · nearest stations: '+d.point.nearest.map(x=>x.name+' ('+Math.round(x.km*0.621)+' mi)').join(', ');
   $('now').innerHTML=`<div class="big ${n.status}"><div class="lab">Right now at your field · ${hm(D(n.time))}</div><div class="word">${word[n.status]}</div>
-    <div class="conf">${Math.round(n.conf*100)}% confidence conditions are safe</div><div class="why">${n.reasons.map(r=>r.text).join(' ')}</div></div>
+    <div class="conf">${n.status==='GO'?Math.round(n.conf*100)+'% confidence conditions are safe':'Weather suitability '+Math.round(n.conf*100)+'%'}</div><div class="why">${n.reasons.map(r=>r.text).join(' ')}</div></div>
     <div class="side"><div class="cmp"><div><div class="t">Single ground reading says</div><div class="v t${n.ground}">${word[n.ground]}</div></div><div><div class="t">SprayWindow says</div><div class="v t${n.status}">${word[n.status]}</div></div></div>
     <div class="kv"><span>Wind at spray height</span><span>${f1(n.lo)}–${f1(n.hi)} mph from ${n.card}</span><span>Wind at 80 m</span><span>${f1(n.ws80)} mph</span>
     <span>Temperature</span><span>${f1(n.temp)} °F</span><span>Air at 80 m vs ground</span><span>${n.dT>0?'+':''}${f1(n.dT)} °F ${n.dT>0?'(inversion)':''}</span>
     <span>Inversion chance (estimate)</span><span>${pc(n.p_inv)}</span><span>Wind in range chance</span><span>${pc(n.p_wind)}</span></div></div>`;
-  $('advice').innerHTML=d.advice+(d.nudge?' <br><em>'+d.nudge+'</em>':'')+'<small>Written from the model\'s numbers by fixed templates. No chat model is connected.</small>';
+  $('advice').innerHTML=d.advice+(d.nudge?' <br><em>'+d.nudge+'</em>':'')+'<small>Written from the model\'s numbers by fixed templates. For questions, use the advisor below.</small>';
   $('slots').innerHTML=d.slots.length?d.slots.map(s=>{const a=D(s.start),e=D(s.end);return `<div class="slot"><div class="d">${dl(a)} · ${s.hours} hour${s.hours>1?'s':''}</div><div class="t">${hm(a)} – ${hm(e)}</div>
-    <div class="bar"><i style="width:${Math.round(s.conf*100)}%"></i></div><div class="m"><b>${Math.round(s.conf*100)}% confidence</b> (lowest hour ${Math.round(s.conf_min*100)}%)<br>Wind ${f1(s.ws_lo)}–${f1(s.ws_hi)} mph from ${s.card} · ${Math.round(s.temp_lo)}–${Math.round(s.temp_hi)} °F</div></div>`}).join(''):'<div class="note">No safe window in the next 72 hours with these limits.</div>';
+    <div class="bar"><i style="width:${Math.round(s.conf*100)}%"></i></div><div class="m"><b>${Math.round(s.conf*100)}% confidence</b> (lowest hour ${Math.round(s.conf_min*100)}%)<br>Wind ${f1(s.ws_lo)}–${f1(s.ws_hi)} mph from ${s.card} · ${Math.round(s.temp_lo)}–${Math.round(s.temp_hi)} °F</div>${s.warn?'<div class="warn">'+s.warn.charAt(0).toUpperCase()+s.warn.slice(1)+'.</div>':''}</div>`}).join(''):'<div class="note">No safe window in the next 72 hours with these limits.</div>';
   renderStrip(); renderDetail(); renderWind(); renderStations();
 }
 function renderStrip(){
@@ -250,6 +306,35 @@ function renderStations(){
    <table><tr><th>Station</th><th>Distance</th><th>Reading time</th><th class="num">Wind (mph)</th><th>From</th><th class="num">Temp (°F)</th><th class="num">Raw forecast there</th><th class="num">Our model there</th></tr>
    ${st.map(s=>{const km=Math.hypot((s.lon-d.point.lon)*93.6,(s.lat-d.point.lat)*110.9);return `<tr><td>${s.name}</td><td>${Math.round(km*0.621)} mi</td><td>${s.time?hm(D(s.time)):'–'}</td><td class="num"><b>${f1(s.ws)}</b></td><td>${s.dir||'–'}</td><td class="num">${f1(s.temp)}</td><td class="num">${f1(s.fc_ws)}</td><td class="num">${f1(s.model_ws)}</td></tr>`}).join('')}</table>
    <div class="note">Station wind is measured about 10 ft above ground. "Our model there" is what the model predicts at that station without using its own reading.</div>`;
+}
+async function ask(q){
+  q=(q||$('chatIn').value).trim(); if(!q)return; $('chatIn').value='';
+  const hist=S.chat.slice(-8); S.chat.push({role:'user',text:q}); drawChat(true);
+  try{const p=params();p.sens=S.sens;const j=await (await fetch('/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:q,history:hist,params:p})})).json();
+    S.chat.push({role:'model',text:j.reply||'No answer.'}); if(j.usage)S.gem=j.usage.total; if(j.model)$('gemBadge').textContent='· '+j.model;
+  }catch(e){S.chat.push({role:'model',text:'The advisor could not be reached.'})}
+  drawChat(false);
+}
+function drawChat(wait){$('chatLog').innerHTML=S.chat.map(m=>`<div class="msg ${m.role}">${esc(m.text).replace(/\*\*(.+?)\*\*/g,'<b>$1</b>')}</div>`).join('')+(wait?'<div class="msg model">Thinking…</div>':'');$('chatLog').scrollTop=1e6}
+const iso=d=>new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,16);
+async function renderRec(){
+  if(!$('rStart').value){const n=new Date();n.setMinutes(0,0,0);$('rStart').value=iso(n);$('rEnd').value=iso(new Date(n.getTime()+2*3600e3))}
+  const h=S.data?S.data.hours[S.sel]:null;
+  $('rCond').innerHTML=h?`Will be saved with: <b>${esc($('crop').value||'crop not set')}</b>, <b>${esc(($('ptype').value||'type not set')+' '+$('product').value)}</b>, and the conditions for the selected hour (${hm(D(h.time))}: ${h.status}, wind ${f1(h.lo)}–${f1(h.hi)} mph from ${h.card}, ${f1(h.temp)} °F).`:'Run a forecast first so conditions can be saved with the record.';
+  drawRec(await (await fetch('/api/sprays')).json());
+}
+async function saveRec(){
+  const h=S.data?S.data.hours[S.sel]:{},d=S.data||{point:{}};
+  const rec={field_name:$('rField').value,lat:$('lat').value,lon:$('lon').value,crop:$('crop').value,pesticide_type:$('ptype').value,product:$('product').value,volatility:$('vol').value,start_time:$('rStart').value.replace('T',' '),end_time:$('rEnd').value.replace('T',' '),
+    status:h.status,confidence_pct:h.conf!=null?Math.round(h.conf*100):'',wind_mph:h.ws,wind_low:h.lo,wind_high:h.hi,wind_from:h.card,temp_f:h.temp,inversion_pct:h.p_inv!=null?Math.round(h.p_inv*100):'',sensitive_areas:S.sens.map(a=>a.name).join('; '),outcome:$('rOut').value,notes:$('rNotes').value};
+  drawRec(await (await fetch('/api/sprays',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(rec)})).json()); $('rNotes').value='';
+}
+function drawRec(rows){
+  if(!rows.length){$('recTable').innerHTML='<div class="note">No sprays recorded yet.</div>';return}
+  const O=['Not known yet','No drift seen','Minor drift','Drift complaint'];
+  $('recTable').innerHTML='<table><tr><th>Start</th><th>End</th><th>Field</th><th>Crop</th><th>Product</th><th>Status then</th><th>Wind (mph)</th><th>Temp</th><th>Inversion</th><th>Sensitive areas</th><th>Outcome</th><th>Notes</th><th></th></tr>'+rows.map(r=>`<tr><td>${esc(r.start_time)}</td><td>${esc(r.end_time)}</td><td>${esc(r.field_name)}</td><td>${esc(r.crop)}</td><td>${esc((r.pesticide_type||'')+' '+(r.product||''))}${r.volatility?' ('+esc(r.volatility)+')':''}</td><td>${r.status?`<span class="pill ${esc(r.status)}">${esc(r.status)}</span> ${esc(r.confidence_pct)}%`:''}</td><td>${esc(r.wind_low)}–${esc(r.wind_high)} ${esc(r.wind_from)}</td><td>${esc(r.temp_f)}</td><td>${esc(r.inversion_pct)}%</td><td>${esc(r.sensitive_areas)}</td><td><select data-id="${r.id}">${O.map(o=>`<option${o===r.outcome?' selected':''}>${o}</option>`).join('')}</select></td><td>${esc(r.notes)}</td><td><button class="ghost" data-del="${r.id}" style="padding:3px 8px">×</button></td></tr>`).join('')+'</table>';
+  $('recTable').querySelectorAll('select').forEach(s=>s.onchange=async()=>drawRec(await (await fetch('/api/sprays/'+s.dataset.id,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({outcome:s.value})})).json()));
+  $('recTable').querySelectorAll('[data-del]').forEach(b=>b.onclick=async()=>drawRec(await (await fetch('/api/sprays/'+b.dataset.del,{method:'DELETE'})).json()));
 }
 function hbars(rows,unit,max){max=max||Math.max(...rows.map(r=>r.v||0))*1.1;return rows.map(r=>`<div class="hbar${r.me?' me':''}"><span>${r.n}</span><div class="b"><i style="width:${Math.min(100,(r.v||0)/max*100)}%"></i></div><span>${r.v==null?'–':f2(r.v)+unit}</span></div>`).join('')}
 function renderAcc(){
@@ -308,8 +393,11 @@ function renderAI(){
   const m=S.meta.metrics||{},sp=m.spec||{},u=S.data?S.data.usage:null;
   const pin=+(localStorage.getItem('pin')||3),pout=+(localStorage.getItem('pout')||15);
   const cost=(i,o)=>(i*pin+o*pout)/1e6;
-  $('tab-ai').innerHTML=`<div class="two"><div class="card"><h2>AI advice layer · estimate</h2>
-   <div class="err" style="background:var(--ca-bg);border-color:#e7c98a;color:#5c3d00">Estimate only: no chat model is connected. The advice text is produced by templates. These numbers show what a chat model would use to write the same advice.</div>
+  const g=S.gem||(S.meta.gemini&&S.meta.gemini.usage)||{calls:0,in:0,out:0};
+  $('tab-ai').innerHTML=`<div class="two"><div class="card"><h2>Gemini advisor · measured usage</h2>
+   ${g.calls?`<div class="kv"><span>Model</span><span>${esc(g.model||'–')}</span><span>Questions answered</span><span>${g.calls}</span><span>Tokens in</span><span>${g.in.toLocaleString()}</span><span>Tokens out (incl. reasoning)</span><span>${g.out.toLocaleString()}</span><span>Cost so far at the prices below</span><span>$${cost(g.in,g.out).toFixed(4)}</span><span>Average per question</span><span>$${(cost(g.in,g.out)/g.calls).toFixed(4)}</span></div>`:'<div class="note">'+(S.meta.gemini&&S.meta.gemini.connected?'Connected. Ask the advisor a question to see real token counts here.':'Not connected: paste your key into gemini_key.txt and restart.')+'</div>'}
+   <h2 style="margin-top:16px">Template advice · estimate</h2>
+   <div class="err" style="background:var(--ca-bg);border-color:#e7c98a;color:#5c3d00">Estimate only: the Advice box is produced by templates, not a chat model. These numbers show what a chat model would use to write it on every refresh.</div>
    ${u?`<div class="kv"><span>Tokens in, this forecast (est.)</span><span>${u.this_call.in.toLocaleString()}</span><span>Tokens out, this forecast (est.)</span><span>${u.this_call.out.toLocaleString()}</span><span>Cost, this forecast (est.)</span><span>$${cost(u.this_call.in,u.this_call.out).toFixed(4)}</span>
    <span>Forecasts served so far</span><span>${u.total.calls}</span><span>Total tokens (est.)</span><span>${(u.total.in+u.total.out).toLocaleString()}</span><span>Total cost (est.)</span><span>$${cost(u.total.in,u.total.out).toFixed(4)}</span>
    <span>One field, hourly updates, 30 days (est.)</span><span>$${(cost(u.this_call.in,u.this_call.out)*24*30).toFixed(2)}</span></div>`:'<div class="note">Run a forecast first.</div>'}

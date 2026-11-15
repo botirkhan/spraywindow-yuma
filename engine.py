@@ -9,10 +9,10 @@ from core import *
 _lock = threading.Lock()
 _cache = {}
 _model = {"mtime": 0, "obj": None}
-LOG_PATH = os.path.join(LOGS, "decision_log.csv")
+LOG_PATH = os.path.join(LOGS, "decision_log_v2.csv")
 USAGE_PATH = os.path.join(DATA, "usage.json")
 LOG_COLS = ["logged_at", "lat", "lon", "valid_hour", "status", "confidence_pct", "ground_station_view", "wind_mph", "wind_low", "wind_high",
-            "wind_from", "temp_f", "temp_80m_minus_2m_f", "inversion_chance_pct", "wind_80m_mph", "triggers", "next_window", "data_source"]
+            "wind_from", "temp_f", "temp_80m_minus_2m_f", "inversion_chance_pct", "wind_80m_mph", "triggers", "next_window", "crop", "pesticide", "sensitive_areas", "data_source"]
 
 
 def model():
@@ -104,7 +104,26 @@ def _status_word(s):
     return {"GO": "Go", "CAUTION": "Caution", "STOP": "Stop"}[s]
 
 
-def forecast_point(lat, lon, wmin=3.0, wmax=10.0, conf=0.7, avoid=None, write_log=True):
+def bearing(lat1, lon1, lat2, lon2):
+    """Compass direction (degrees) from point 1 to point 2."""
+    x = (lon2 - lon1) * 93.6
+    y = (lat2 - lat1) * 110.9
+    return (np.rad2deg(np.arctan2(x, y)) + 360.0) % 360.0
+
+
+def forecast_point(lat, lon, wmin=3.0, wmax=10.0, conf=0.7, sens=None, profile=None, write_log=True):
+    profile = profile or {}
+    ptype = (profile.get("ptype") or "").lower()
+    vol = (profile.get("vol") or "").lower()
+    areas = []
+    for i, a in enumerate(sens or []):
+        try:
+            la, lo_ = float(a["lat"]), float(a["lon"])
+        except Exception:
+            continue
+        b = float(bearing(lat, lon, la, lo_))
+        areas.append({"name": str(a.get("name") or "Area %d" % (i + 1))[:40], "lat": la, "lon": lo_, "bearing": round(b), "card": cardinal(b),
+                      "miles": round(km(lat, lon, la, lo_) * 0.621, 2)})
     M = model()
     if M is None:
         raise RuntimeError("Model not trained yet. Run 2_train.bat first.")
@@ -165,14 +184,20 @@ def forecast_point(lat, lon, wmin=3.0, wmax=10.0, conf=0.7, avoid=None, write_lo
             caution = True
             reasons.append({"code": "SHEAR", "text": "Wind above the canopy differs from ground level (%.0f mph from %s at 80 m vs %.0f mph from %s at 10 m)." % (
                 r.ws80, cardinal(r.wd80), r.ws10, cardinal(r.wd10))})
-        toward = None
-        if avoid is not None:
-            blowing_to = (float(r.dir_p) + 180) % 360
-            if dir_diff(blowing_to, avoid) <= 50:
-                caution = True
-                toward = True
-                reasons.append({"code": "TOWARD_SENSITIVE", "text": "Wind is blowing toward the sensitive area you marked (%s side)." % cardinal(avoid)})
-        if psafe < 0.4 or (r.dT > 0 and pinv[i] >= 0.6):
+        toward = False
+        blowing_to = (float(r.dir_p) + 180) % 360
+        hit = [a for a in areas if dir_diff(blowing_to, a["bearing"]) <= 45]
+        if hit:
+            caution = True
+            toward = True
+            reasons.append({"code": "TOWARD_SENSITIVE", "text": "Wind is blowing toward %s." % ", ".join("%s (%.1f mi to the %s)" % (a["name"], a["miles"], a["card"]) for a in hit)})
+        if vol == "high" and r.temp_p >= 85:
+            caution = True
+            reasons.append({"code": "VOLATILITY_HEAT", "text": "At %.0f°F a high-volatility product turns to vapor more readily and can move after spraying." % r.temp_p})
+        if vol == "high" and 0.3 <= pinv[i] < 0.5 and r.dT <= 0:
+            caution = True
+            reasons.append({"code": "VOLATILITY_INVERSION", "text": "A %d%% inversion chance is too high for a high-volatility product." % round(pinv[i] * 100)})
+        if psafe < 0.4 or (r.dT > 0 and pinv[i] >= 0.6) or (toward and ptype == "herbicide"):
             status = "STOP"
         elif psafe >= conf and not caution:
             status = "GO"
@@ -203,6 +228,9 @@ def forecast_point(lat, lon, wmin=3.0, wmax=10.0, conf=0.7, avoid=None, write_lo
                           "conf": round(float(np.mean([h["conf"] for h in seg])), 3), "conf_min": round(min(h["conf"] for h in seg), 3),
                           "ws_lo": min(h["lo"] for h in seg), "ws_hi": max(h["hi"] for h in seg), "card": seg[len(seg) // 2]["card"],
                           "temp_lo": min(h["temp"] for h in seg), "temp_hi": max(h["temp"] for h in seg)})
+            after = hours[j + 1:j + 4]
+            if vol in ("medium", "high") and after and max(h["p_inv"] for h in after) >= 0.5:
+                slots[-1]["warn"] = "an inversion is likely within 3 hours after this window; vapor from a %s-volatility product can still drift, so finish early and keep watching" % vol
             i = j + 1
         else:
             i += 1
@@ -216,9 +244,11 @@ def forecast_point(lat, lon, wmin=3.0, wmax=10.0, conf=0.7, avoid=None, write_lo
     nxt_txt = ("%s to %s (%d%% confidence)" % (fmt(nxt["start"]), pd.Timestamp(nxt["end"]).strftime("%I:%M %p").lstrip("0"), round(nxt["conf"] * 100))) if nxt else "none in the next 72 hours"
     advice = "Right now: %s. %s " % (_status_word(cur["status"]).upper(), cur["reasons"][0]["text"] if cur["reasons"] else "")
     if cur["ground"] == "GO" and cur["status"] != "GO":
-        advice += "A single ground-level reading (%.0f mph) would look fine, but the air above the field says otherwise. " % cur["ws"]
+        advice += "A single ground-level wind reading (%.0f mph) would look fine, but it misses this. " % cur["ws"]
     if nxt:
         advice += "Next safe window: %s, wind %.0f-%.0f mph from the %s." % (nxt_txt, nxt["ws_lo"], nxt["ws_hi"], nxt["card"])
+        if nxt.get("warn"):
+            advice += " Note: %s." % nxt["warn"]
         if len(slots) > 1:
             advice += " %d more window%s in the next 3 days." % (len(slots) - 1, " follows" if len(slots) == 2 else "s follow")
     else:
@@ -232,7 +262,7 @@ def forecast_point(lat, lon, wmin=3.0, wmax=10.0, conf=0.7, avoid=None, write_lo
         "point": {"lat": lat, "lon": lon, "elev_m": elev,
                   "nearest": sorted([{"name": STATIONS[s]["name"], "km": round(km(lat, lon, STATIONS[s]["lat"], STATIONS[s]["lon"]), 1)} for s in M["sids"]], key=lambda x: x["km"])[:3]},
         "generated": now.strftime("%Y-%m-%d %H:%M:%S"), "source": "SIMULATED DATA" if ds.SYNTH else src,
-        "settings": {"wmin": wmin, "wmax": wmax, "conf": conf, "avoid": avoid},
+        "settings": {"wmin": wmin, "wmax": wmax, "conf": conf}, "profile": profile, "sens": areas,
         "now": cur, "hours": hours, "slots": slots, "advice": advice, "nudge": nudge_note,
         "stations": stations, "stations_source": st_src,
         "spread": {"ws": round(max(obs_ws) - min(obs_ws), 1) if obs_ws else None, "temp": round(max(obs_t) - min(obs_t), 1) if obs_t else None},
@@ -240,7 +270,8 @@ def forecast_point(lat, lon, wmin=3.0, wmax=10.0, conf=0.7, avoid=None, write_lo
     }
     if write_log:
         _log([out["generated"], round(lat, 4), round(lon, 4), cur["time"], cur["status"], round(cur["conf"] * 100), cur["ground"], cur["ws"], cur["lo"], cur["hi"],
-              cur["card"], cur["temp"], cur["dT"], round(cur["p_inv"] * 100), cur["ws80"], " | ".join(r["code"] for r in cur["reasons"]), nxt_txt, out["source"]])
+              cur["card"], cur["temp"], cur["dT"], round(cur["p_inv"] * 100), cur["ws80"], " | ".join(r["code"] for r in cur["reasons"]), nxt_txt, profile.get("crop") or "", " ".join(x for x in (profile.get("ptype"), profile.get("product"), ("(%s volatility)" % vol) if vol else "") if x),
+              "; ".join("%s %.1f mi %s" % (a["name"], a["miles"], a["card"]) for a in areas), out["source"]])
     return out
 
 

@@ -1,0 +1,3 @@
+# Paste your Gemini API key after the = sign, save this file, then restart the app
+# (close the black window and double-click 3_run.bat). Do not share this file.
+GEMINI_API_KEY=

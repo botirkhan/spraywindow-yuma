@@ -16,6 +16,10 @@ A Yuma grower told us the nearby weather stations all read differently, so he ca
 4. Turns that into the chance the wind stays inside the applicator's limits (default 3-10 mph), combines it with an inversion estimate from the 80 m vs 2 m temperature difference, and lists the safe windows.
 5. Flags wind shear between heights and wind blowing toward a marked sensitive area.
 6. Logs every decision with a time stamp, the readings and what triggered the status (CSV download).
+7. Asks for the crop and pesticide type. Herbicides turn "wind toward a sensitive area" into Stop; high-volatility products get extra caution in heat (85 F+) and when an inversion may follow the spray window.
+8. Lets the grower mark any number of sensitive areas (neighboring crops, homes, water) by clicking the map, and flags hours when the wind blows toward any of them.
+9. Stores past sprays in a local SQLite database (`data/sprays.db`) with the conditions at the time and the outcome.
+10. Includes a Google Gemini advisor that answers questions in plain language. It is given the current forecast, station readings, tested accuracy and the grower's spray records, and it reports real token usage.
 
 ## Measured accuracy
 
@@ -49,7 +53,7 @@ More history helps: wind error falls from 1.90 to 1.71 mph going from 1 to 10 mo
 - AZMet stations measure temperature at one height. The inversion chance is a rule-based estimate from forecast temperature at 2 m and 80 m, not a measurement. A two-height sensor at the field would replace it.
 - Two to three days ahead the in-range calls are only modestly better than chance; the confidence figure widens to reflect that.
 - Tested on five stations. A field far from all of them will be less accurate.
-- The advice text is written by templates. No chat model is connected; the token and cost panel is an estimate and is labeled as one.
+- The Advice box is written by templates. The Gemini advisor needs your own API key; without one the app still works. The product rules (herbicide, volatility) are simple general guidance, not label requirements.
 - This tool supports the applicator's decision. It does not replace pesticide labels, on-site checks or regulations.
 
 ## Run it (Windows)
@@ -58,6 +62,7 @@ More history helps: wind error falls from 1.90 to 1.71 mph going from 1 to 10 mo
 2. Double-click `1_setup.bat` (installs packages).
 3. Double-click `2_train.bat` (downloads a year of data and trains; about 2 minutes).
 4. Double-click `3_run.bat` and open http://127.0.0.1:8000.
+5. Optional, for the advisor: copy `gemini_key.example.txt` to `gemini_key.txt` and paste your Gemini API key after the `=` sign. That file is git-ignored.
 
 On macOS or Linux: `pip install -r requirements.txt`, `python pipeline.py`, `python server.py`.
 
@@ -70,6 +75,8 @@ On macOS or Linux: `pip install -r requirements.txt`, `python pipeline.py`, `pyt
 | `core.py` | Features, the model, probability maths |
 | `pipeline.py` | Download, honest tests, final training |
 | `engine.py` | Live forecast, statuses, spray windows, log |
+| `store.py` | SQLite database of past sprays |
+| `advisor.py` | Gemini advisor (context building, API call, token usage) |
 | `server.py` | Local web server |
 | `static/index.html` | The app screen |
 
@@ -78,6 +85,8 @@ On macOS or Linux: `pip install -r requirements.txt`, `python pipeline.py`, `pyt
 - [AZMet](https://azmet.arizona.edu/), Arizona Meteorological Network, University of Arizona (station observations).
 - [Open-Meteo](https://open-meteo.com/) forecast, historical-forecast and previous-runs APIs (CC BY 4.0).
 - Map tiles: OpenStreetMap contributors.
+
+The repository includes the downloaded data and the trained model in `data/`, so the app runs without step 3. The model file was saved with scikit-learn on Python 3.12; if it fails to load, run step 3.
 
 ## Next steps
 

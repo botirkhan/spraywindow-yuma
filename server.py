@@ -3,7 +3,7 @@ import os, sys, json, subprocess, threading
 from flask import Flask, request, jsonify, send_from_directory, Response
 from config import *
 import datasrc as ds
-import engine
+import engine, store, advisor
 
 app = Flask(__name__, static_folder=os.path.join(ROOT, "static"))
 _train = {"running": False, "last": None, "ok": None}
@@ -23,7 +23,45 @@ def meta():
     if os.path.exists(p):
         runs = json.load(open(p))
     return jsonify({"stations": [dict(id=k, **v) for k, v in STATIONS.items()], "bounds": BOUNDS, "default": DEFAULT_POINT,
-                    "metrics": engine.metrics(), "runs": runs, "synthetic": ds.SYNTH, "training": _train})
+                    "metrics": engine.metrics(), "runs": runs, "synthetic": ds.SYNTH, "training": _train,
+                    "gemini": {"connected": advisor.connected(), "usage": advisor.usage()}})
+
+
+def _forecast(a, write_log):
+    lat, lon = float(a.get("lat", DEFAULT_POINT["lat"])), float(a.get("lon", DEFAULT_POINT["lon"]))
+    sens = a.get("sens") or []
+    if isinstance(sens, str):
+        sens = json.loads(sens) if sens.strip() else []
+    profile = {k: (a.get(k) or "") for k in ("crop", "ptype", "product", "vol")}
+    return engine.forecast_point(lat, lon, float(a.get("wmin", 3)), float(a.get("wmax", 10)), float(a.get("conf", 0.7)), sens[:12], profile, write_log)
+
+
+@app.route("/api/chat", methods=["POST"])
+def chat():
+    try:
+        b = request.get_json(force=True)
+        fc = _forecast(b.get("params") or {}, False)
+        return jsonify(advisor.chat(b.get("message", ""), b.get("history", []), fc))
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({"connected": advisor.connected(), "reply": "The advisor hit an error: %s" % str(e)[:200]}), 200
+
+
+@app.route("/api/sprays", methods=["GET", "POST"])
+def sprays():
+    if request.method == "POST":
+        store.add(request.get_json(force=True))
+    return jsonify(store.recent())
+
+
+@app.route("/api/sprays/<int:sid>", methods=["POST", "DELETE"])
+def spray_one(sid):
+    if request.method == "DELETE":
+        store.delete(sid)
+    else:
+        store.set_outcome(sid, request.get_json(force=True).get("outcome", ""))
+    return jsonify(store.recent())
 
 
 @app.route("/api/forecast")
@@ -33,10 +71,7 @@ def forecast():
         lat, lon = float(a.get("lat", DEFAULT_POINT["lat"])), float(a.get("lon", DEFAULT_POINT["lon"]))
         if not (BOUNDS["lat_min"] <= lat <= BOUNDS["lat_max"] and BOUNDS["lon_min"] <= lon <= BOUNDS["lon_max"]):
             return jsonify({"error": "That point is outside the Yuma area this model was trained for."}), 400
-        avoid = a.get("avoid")
-        out = engine.forecast_point(lat, lon, float(a.get("wmin", 3)), float(a.get("wmax", 10)), float(a.get("conf", 0.7)),
-                                    float(avoid) if avoid not in (None, "", "none") else None)
-        return jsonify(out)
+        return jsonify(_forecast(a, True))
     except Exception as e:
         import traceback
         traceback.print_exc()
