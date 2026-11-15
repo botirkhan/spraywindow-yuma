@@ -85,6 +85,15 @@ td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 .note{font-size:13px;color:var(--mute);margin-top:8px}
 .pill{display:inline-block;padding:2px 9px;border-radius:99px;font-size:12px;font-weight:700;color:#fff}
 .hide{display:none}
+.phone{width:250px;margin:4px auto 0;background:#101613;border-radius:30px;padding:12px 10px 16px;box-shadow:0 6px 18px rgba(0,0,0,.18)}
+.phone .scr{background:linear-gradient(160deg,#2c4a3a,#16261d);border-radius:20px;padding:10px 8px;min-height:330px}
+.phone .clock{color:#fff;text-align:center;font-size:26px;font-weight:300;margin:4px 0 2px}.phone .dt{color:#cfe0d5;text-align:center;font-size:11px;margin-bottom:10px}
+.ntf{background:rgba(255,255,255,.93);border-radius:12px;padding:8px 9px;margin-bottom:7px;font-size:11.5px;line-height:1.35;border-left:5px solid #999}
+.ntf.GO{border-left-color:var(--go)}.ntf.CAUTION{border-left-color:var(--ca)}.ntf.STOP{border-left-color:var(--st)}
+.ntf .h{display:flex;justify-content:space-between;color:#55635a;font-size:10px;margin-bottom:2px}.ntf b{display:block;font-size:12px;color:#14211a}
+.ntf.future{opacity:.62}
+#toast{position:fixed;right:20px;bottom:20px;background:#17261d;color:#fff;padding:13px 16px;border-radius:10px;max-width:340px;box-shadow:0 8px 24px rgba(0,0,0,.3);font-size:14px;z-index:9999;display:none}
+#toast b{display:block;margin-bottom:3px}
 .sens{display:grid;grid-template-columns:1fr auto 26px;gap:6px;align-items:center;margin-top:6px;font-size:12.5px}
 .sens input{padding:5px 7px;font-size:13px}.sens button{border:0;background:#eadfd9;border-radius:6px;cursor:pointer;height:28px;color:#7a2416;font-weight:700}
 button.ghost.on{background:var(--st);color:#fff;border-color:var(--st)}
@@ -113,6 +122,7 @@ svg text{font:11px "Segoe UI",system-ui,sans-serif;fill:#5d6b62}
   <button data-tab="log">Decision log</button>
   <button data-tab="ai">AI &amp; cost</button>
 </nav>
+<div id="toast"></div>
 <main>
 <div id="err" class="err hide"></div>
 
@@ -138,6 +148,11 @@ svg text{font:11px "Segoe UI",system-ui,sans-serif;fill:#5d6b62}
      <button class="ghost" id="sensBtn" style="width:100%">+ Add areas by clicking the map</button>
      <div id="sensList"></div>
      <div class="note">Mark neighboring crops, homes, schools or water. Add as many as you need.</div>
+   </div>
+   <div class="card"><h2>Phone alerts · simulated</h2>
+     <div class="phone"><div class="scr"><div class="clock" id="phClock"></div><div class="dt" id="phDate"></div><div id="phList"></div></div></div>
+     <div class="note">Simulation: these are the push alerts the app would send to the applicator's phone and when. Nothing is actually sent. Faded alerts are scheduled for later.</div>
+     <button class="ghost" id="testAlert" style="width:100%;margin-top:8px">Show a test alert</button>
    </div>
    <div class="card"><h2>Spray limits</h2>
      <div class="row2"><div><label>Min wind (mph)</label><input id="wmin" type="number" value="3" step="0.5"></div><div><label>Max wind (mph)</label><input id="wmax" type="number" value="10" step="0.5"></div></div>
@@ -212,6 +227,8 @@ async function init(){
   $('chips').querySelectorAll('button').forEach(b=>b.onclick=()=>ask(b.textContent));
   $('gemBadge').textContent=S.meta.gemini&&S.meta.gemini.connected?'· Gemini connected':'· Gemini not connected (add key to gemini_key.txt)';
   $('rSave').onclick=saveRec;
+  $('testAlert').onclick=()=>{const a=S.data&&S.data.alerts[0];if(a)toast(a.title,a.body)};
+  setInterval(()=>{if(!document.hidden)load(true)},300000);
   $('lat').onchange=$('lon').onchange=()=>{moveMarker(+$('lat').value,+$('lon').value);load()};
   load();
 }
@@ -243,13 +260,14 @@ function drawSens(){
 function moveMarker(la,lo){if(S.marker)S.marker.setLatLng([la,lo]); if(S.redraw)S.redraw()}
 function setPoint(la,lo){$('lat').value=la.toFixed(4);$('lon').value=lo.toFixed(4);moveMarker(la,lo);load()}
 
-async function load(){
-  showErr(''); $('go').innerHTML='<span class="spin"></span>Working…';
+async function load(auto){
+  showErr(''); $('go').innerHTML='<span class="spin"></span>Working…'; const prev=S.data?S.data.now.status:null;
   const q=new URLSearchParams(params());
   try{
     const r=await fetch('/api/forecast?'+q), j=await r.json();
     if(!r.ok||j.error){showErr(j.error||'Forecast failed.');return}
     S.data=j; S.sel=0; render(); drawSens();
+    if(auto===true&&prev&&prev!==j.now.status)toast('Status changed: '+prev+' → '+j.now.status,j.now.reasons.map(r=>r.text).join(' '));
   }catch(e){showErr('Forecast request failed: '+e)}finally{$('go').textContent='Update forecast'}
 }
 
@@ -267,7 +285,12 @@ function render(){
   $('advice').innerHTML=d.advice+(d.nudge?' <br><em>'+d.nudge+'</em>':'')+'<small>Written from the model\'s numbers by fixed templates. For questions, use the advisor below.</small>';
   $('slots').innerHTML=d.slots.length?d.slots.map(s=>{const a=D(s.start),e=D(s.end);return `<div class="slot"><div class="d">${dl(a)} · ${s.hours} hour${s.hours>1?'s':''}</div><div class="t">${hm(a)} – ${hm(e)}</div>
     <div class="bar"><i style="width:${Math.round(s.conf*100)}%"></i></div><div class="m"><b>${Math.round(s.conf*100)}% confidence</b> (lowest hour ${Math.round(s.conf_min*100)}%)<br>Wind ${f1(s.ws_lo)}–${f1(s.ws_hi)} mph from ${s.card} · ${Math.round(s.temp_lo)}–${Math.round(s.temp_hi)} °F</div>${s.warn?'<div class="warn">'+s.warn.charAt(0).toUpperCase()+s.warn.slice(1)+'.</div>':''}</div>`}).join(''):'<div class="note">No safe window in the next 72 hours with these limits.</div>';
-  renderStrip(); renderDetail(); renderWind(); renderStations();
+  renderStrip(); renderDetail(); renderWind(); renderStations(); renderPhone();
+}
+function toast(title,body){const t=$('toast');t.innerHTML='<b>📱 '+esc(title)+'</b>'+esc(body)+'<div style="opacity:.6;font-size:11px;margin-top:4px">Simulated phone alert</div>';t.style.display='block';clearTimeout(S.tt);S.tt=setTimeout(()=>t.style.display='none',7000)}
+function renderPhone(){
+  const d=S.data,g=D(d.generated);$('phClock').textContent=hm(g).replace(/ [AP]M/,'');$('phDate').textContent=dl(g);
+  $('phList').innerHTML=d.alerts.slice(0,6).map(a=>{const t=D(a.at),fut=t>g;return `<div class="ntf ${a.kind}${fut?' future':''}"><div class="h"><span>SprayWindow</span><span>${fut?'scheduled '+DAY[t.getDay()]+' '+hm(t):'now'}</span></div><b>${esc(a.title)}</b>${esc(a.body)}</div>`}).join('');
 }
 function renderStrip(){
   const hs=S.data.hours, days={};

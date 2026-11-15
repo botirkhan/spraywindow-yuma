@@ -237,6 +237,28 @@ def forecast_point(lat, lon, wmin=3.0, wmax=10.0, conf=0.7, sens=None, profile=N
 
     cur = hours[0]
 
+    # phone alerts the app would send (simulated: nothing leaves this computer)
+    def _t(ts):
+        return pd.Timestamp(ts).strftime("%a %I:%M %p").replace(" 0", " ")
+    alerts = [{"at": now.strftime("%Y-%m-%dT%H:%M"), "kind": cur["status"], "title": "Now: %s at your field" % _status_word(cur["status"]),
+               "body": cur["reasons"][0]["text"] if cur["reasons"] else ""}]
+    for s in slots:
+        st, en = pd.Timestamp(s["start"]), pd.Timestamp(s["end"])
+        if st > pd.Timestamp(hour0):
+            alerts.append({"at": (st - pd.Timedelta(minutes=30)).strftime("%Y-%m-%dT%H:%M"), "kind": "GO", "title": "Spray window opens %s" % _t(st),
+                           "body": "%d hour%s, %d%% confidence, wind %.0f-%.0f mph from the %s." % (s["hours"], "" if s["hours"] == 1 else "s", round(s["conf"] * 100), s["ws_lo"], s["ws_hi"], s["card"])})
+        nxt_h = next((h for h in hours if h["time"] == s["end"]), None)
+        if nxt_h:
+            alerts.append({"at": (en - pd.Timedelta(minutes=30)).strftime("%Y-%m-%dT%H:%M"), "kind": nxt_h["status"], "title": "Window closes %s" % _t(en),
+                           "body": "Finish up. Then: " + (nxt_h["reasons"][0]["text"] if nxt_h["reasons"] else _status_word(nxt_h["status"]))})
+    for k in range(1, len(hours)):
+        inv_now = any(r["code"] == "INVERSION" for r in hours[k]["reasons"])
+        inv_before = any(r["code"] == "INVERSION" for r in hours[k - 1]["reasons"])
+        if inv_now and not inv_before:
+            alerts.append({"at": (pd.Timestamp(hours[k]["time"]) - pd.Timedelta(minutes=60)).strftime("%Y-%m-%dT%H:%M"), "kind": "STOP",
+                           "title": "Inversion expected %s" % _t(hours[k]["time"]), "body": "Do not spray. " + hours[k]["reasons"][0]["text"]})
+    alerts = sorted(alerts, key=lambda x: x["at"])[:9]
+
     def fmt(ts):
         t = pd.Timestamp(ts)
         return t.strftime("%a %b %d, %I:%M %p").replace(" 0", " ")
@@ -263,7 +285,7 @@ def forecast_point(lat, lon, wmin=3.0, wmax=10.0, conf=0.7, sens=None, profile=N
                   "nearest": sorted([{"name": STATIONS[s]["name"], "km": round(km(lat, lon, STATIONS[s]["lat"], STATIONS[s]["lon"]), 1)} for s in M["sids"]], key=lambda x: x["km"])[:3]},
         "generated": now.strftime("%Y-%m-%d %H:%M:%S"), "source": "SIMULATED DATA" if ds.SYNTH else src,
         "settings": {"wmin": wmin, "wmax": wmax, "conf": conf}, "profile": profile, "sens": areas,
-        "now": cur, "hours": hours, "slots": slots, "advice": advice, "nudge": nudge_note,
+        "now": cur, "hours": hours, "slots": slots, "alerts": alerts, "advice": advice, "nudge": nudge_note,
         "stations": stations, "stations_source": st_src,
         "spread": {"ws": round(max(obs_ws) - min(obs_ws), 1) if obs_ws else None, "temp": round(max(obs_t) - min(obs_t), 1) if obs_t else None},
         "usage": usage,

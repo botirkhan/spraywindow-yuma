@@ -101,7 +101,7 @@ def _pick_model(key):
 
 def chat(message, history, fc):
     if not connected():
-        return {"connected": False, "reply": "The Gemini advisor is not connected. Paste your Gemini API key into gemini_key.txt in the project folder and restart the app. Until then, the Advice box above still explains the forecast."}
+        return {"connected": False, "reply": "The Gemini advisor is not connected. Paste your Gemini API key into gemini_key.txt in the project folder and save it; no restart is needed. Until then, the Advice box above still explains the forecast."}
     key = os.environ["GEMINI_API_KEY"]
     contents = []
     for h in (history or [])[-8:]:

@@ -20,6 +20,7 @@ A Yuma grower told us the nearby weather stations all read differently, so he ca
 8. Lets the grower mark any number of sensitive areas (neighboring crops, homes, water) by clicking the map, and flags hours when the wind blows toward any of them.
 9. Stores past sprays in a local SQLite database (`data/sprays.db`) with the conditions at the time and the outcome.
 10. Includes a Google Gemini advisor that answers questions in plain language. It is given the current forecast, station readings, tested accuracy and the grower's spray records, and it reports real token usage.
+11. Shows the phone alerts it would send (window opening, window closing, inversion expected, status change) on a simulated phone, and refreshes itself every 5 minutes. No messages are actually sent.
 
 ## Measured accuracy
 
