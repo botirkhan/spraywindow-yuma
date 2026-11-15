@@ -3,7 +3,7 @@ import os, sys, json, subprocess, threading
 from flask import Flask, request, jsonify, send_from_directory, Response
 from config import *
 import datasrc as ds
-import engine, store, advisor
+import engine, store, advisor, notify
 
 app = Flask(__name__, static_folder=os.path.join(ROOT, "static"))
 _train = {"running": False, "last": None, "ok": None}
@@ -46,6 +46,19 @@ def chat():
         import traceback
         traceback.print_exc()
         return jsonify({"connected": advisor.connected(), "reply": "The advisor hit an error: %s" % str(e)[:200]}), 200
+
+
+@app.route("/api/notify", methods=["GET", "POST"])
+def notify_api():
+    if request.method == "POST":
+        b = request.get_json(force=True)
+        if b.get("action") == "test":
+            fc = _forecast(b.get("params") or {}, False)
+            a = fc["alerts"][0]
+            ok = notify.send(a["title"], a["body"], a["kind"])
+            return jsonify(dict(notify.public(), ok=ok))
+        return jsonify(notify.enable(bool(b.get("on")), b.get("params") or {}))
+    return jsonify(notify.public())
 
 
 @app.route("/api/sprays", methods=["GET", "POST"])
@@ -115,4 +128,6 @@ def retrain_status():
 
 if __name__ == "__main__":
     print("SprayWindow Yuma running at http://127.0.0.1:8000", flush=True)
+    if notify.state().get("enabled"):
+        notify.start()
     app.run(host="127.0.0.1", port=8000, debug=False, threaded=True)

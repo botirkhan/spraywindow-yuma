@@ -203,6 +203,8 @@ def forecast_point(lat, lon, wmin=3.0, wmax=10.0, conf=0.7, sens=None, profile=N
             status = "GO"
         else:
             status = "CAUTION"
+        if status != "GO" and not reasons:
+            reasons.append({"code": "LOW_CONFIDENCE", "text": "Confidence that conditions are safe is %d%%, below the %d%% you asked for." % (round(psafe * 100), round(conf * 100))})
         if status == "GO" and not reasons:
             reasons.append({"code": "OK", "text": "Wind %.0f-%.0f mph from the %s, inside %g-%g mph, and no inversion expected." % (lo[i], hi[i], cardinal(r.dir_p), wmin, wmax)})
         ground = "GO" if wmin <= r.q50 <= wmax else "STOP"
@@ -257,7 +259,8 @@ def forecast_point(lat, lon, wmin=3.0, wmax=10.0, conf=0.7, sens=None, profile=N
         if inv_now and not inv_before:
             alerts.append({"at": (pd.Timestamp(hours[k]["time"]) - pd.Timedelta(minutes=60)).strftime("%Y-%m-%dT%H:%M"), "kind": "STOP",
                            "title": "Inversion expected %s" % _t(hours[k]["time"]), "body": "Do not spray. " + hours[k]["reasons"][0]["text"]})
-    alerts = sorted(alerts, key=lambda x: x["at"])[:9]
+    recent = (now - dt.timedelta(minutes=45)).strftime("%Y-%m-%dT%H:%M")
+    alerts = alerts[:1] + sorted([x for x in alerts[1:] if x["at"] >= recent], key=lambda x: x["at"])[:8]
 
     def fmt(ts):
         t = pd.Timestamp(ts)

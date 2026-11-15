@@ -20,7 +20,7 @@ A Yuma grower told us the nearby weather stations all read differently, so he ca
 8. Lets the grower mark any number of sensitive areas (neighboring crops, homes, water) by clicking the map, and flags hours when the wind blows toward any of them.
 9. Stores past sprays in a local SQLite database (`data/sprays.db`) with the conditions at the time and the outcome.
 10. Includes a Google Gemini advisor that answers questions in plain language. It is given the current forecast, station readings, tested accuracy and the grower's spray records, and it reports real token usage.
-11. Shows the phone alerts it would send (window opening, window closing, inversion expected, status change) on a simulated phone, and refreshes itself every 5 minutes. No messages are actually sent.
+11. Sends phone push alerts (status change, window opening, window closing, inversion expected) through the free ntfy app: install ntfy, subscribe to the random topic shown in the app, and switch on live alerts. A phone preview on screen shows what goes out and when, and the page refreshes itself every 5 minutes.
 
 ## Measured accuracy
 
@@ -78,6 +78,7 @@ On macOS or Linux: `pip install -r requirements.txt`, `python pipeline.py`, `pyt
 | `engine.py` | Live forecast, statuses, spray windows, log |
 | `store.py` | SQLite database of past sprays |
 | `advisor.py` | Gemini advisor (context building, API call, token usage) |
+| `notify.py` | Phone push alerts through ntfy.sh |
 | `server.py` | Local web server |
 | `static/index.html` | The app screen |
 

@@ -6,3 +6,4 @@ gemini_key.txt
 data/usage.json
 data/usage_gemini.json
 data/sprays.db
+data/notify.json

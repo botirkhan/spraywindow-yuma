@@ -149,10 +149,17 @@ svg text{font:11px "Segoe UI",system-ui,sans-serif;fill:#5d6b62}
      <div id="sensList"></div>
      <div class="note">Mark neighboring crops, homes, schools or water. Add as many as you need.</div>
    </div>
-   <div class="card"><h2>Phone alerts · simulated</h2>
+   <div class="card"><h2>Phone alerts</h2>
      <div class="phone"><div class="scr"><div class="clock" id="phClock"></div><div class="dt" id="phDate"></div><div id="phList"></div></div></div>
-     <div class="note">Simulation: these are the push alerts the app would send to the applicator's phone and when. Nothing is actually sent. Faded alerts are scheduled for later.</div>
-     <button class="ghost" id="testAlert" style="width:100%;margin-top:8px">Show a test alert</button>
+     <div class="note">Preview of the alerts and when they go out. Faded alerts are scheduled for later.</div>
+     <div style="border-top:1px solid var(--line);margin-top:10px;padding-top:10px;font-size:13px">
+       <b>Get them on a real phone</b>
+       <ol style="margin:6px 0 8px;padding-left:18px"><li>Install the free <b>ntfy</b> app (iPhone or Android).</li><li>Tap + and subscribe to this topic:<br><code id="ntTopic" style="font-size:12.5px;background:#eef4ee;padding:2px 6px;border-radius:5px;user-select:all"></code></li></ol>
+       <button class="ghost" id="ntTest" style="width:100%">Send a test alert to the phone</button>
+       <label style="display:flex;gap:8px;align-items:center;margin-top:10px;color:var(--ink);font-size:13.5px"><input id="ntOn" type="checkbox" style="width:auto"> Send live alerts for this field</label>
+       <div class="note" id="ntStatus"></div>
+     </div>
+     <button class="ghost" id="testAlert" style="width:100%;margin-top:8px">Show a test alert on this screen</button>
    </div>
    <div class="card"><h2>Spray limits</h2>
      <div class="row2"><div><label>Min wind (mph)</label><input id="wmin" type="number" value="3" step="0.5"></div><div><label>Max wind (mph)</label><input id="wmax" type="number" value="10" step="0.5"></div></div>
@@ -227,6 +234,9 @@ async function init(){
   $('chips').querySelectorAll('button').forEach(b=>b.onclick=()=>ask(b.textContent));
   $('gemBadge').textContent=S.meta.gemini&&S.meta.gemini.connected?'· Gemini connected':'· Gemini not connected (add key to gemini_key.txt)';
   $('rSave').onclick=saveRec;
+  loadNotify();
+  $('ntTest').onclick=async()=>{$('ntStatus').textContent='Sending…';const p=params();p.sens=S.sens;showNotify(await (await fetch('/api/notify',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'test',params:p})})).json(),true)};
+  $('ntOn').onchange=async()=>{const p=params();p.sens=S.sens;showNotify(await (await fetch('/api/notify',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({on:$('ntOn').checked,params:p})})).json())};
   $('testAlert').onclick=()=>{const a=S.data&&S.data.alerts[0];if(a)toast(a.title,a.body)};
   setInterval(()=>{if(!document.hidden)load(true)},300000);
   $('lat').onchange=$('lon').onchange=()=>{moveMarker(+$('lat').value,+$('lon').value);load()};
@@ -287,6 +297,8 @@ function render(){
     <div class="bar"><i style="width:${Math.round(s.conf*100)}%"></i></div><div class="m"><b>${Math.round(s.conf*100)}% confidence</b> (lowest hour ${Math.round(s.conf_min*100)}%)<br>Wind ${f1(s.ws_lo)}–${f1(s.ws_hi)} mph from ${s.card} · ${Math.round(s.temp_lo)}–${Math.round(s.temp_hi)} °F</div>${s.warn?'<div class="warn">'+s.warn.charAt(0).toUpperCase()+s.warn.slice(1)+'.</div>':''}</div>`}).join(''):'<div class="note">No safe window in the next 72 hours with these limits.</div>';
   renderStrip(); renderDetail(); renderWind(); renderStations(); renderPhone();
 }
+async function loadNotify(){try{showNotify(await (await fetch('/api/notify')).json())}catch(e){}}
+function showNotify(n,tested){$('ntTopic').textContent=n.topic;$('ntOn').checked=n.enabled;$('ntStatus').textContent=n.last_error?'Could not send: '+n.last_error:((tested?(n.ok?'Test sent. ':'Test failed. '):'')+(n.enabled?'Live alerts are on: status changes, windows opening and closing, inversions. ':'Live alerts are off. ')+n.count+' sent so far.')}
 function toast(title,body){const t=$('toast');t.innerHTML='<b>📱 '+esc(title)+'</b>'+esc(body)+'<div style="opacity:.6;font-size:11px;margin-top:4px">Simulated phone alert</div>';t.style.display='block';clearTimeout(S.tt);S.tt=setTimeout(()=>t.style.display='none',7000)}
 function renderPhone(){
   const d=S.data,g=D(d.generated);$('phClock').textContent=hm(g).replace(/ [AP]M/,'');$('phDate').textContent=dl(g);
