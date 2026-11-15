@@ -1,0 +1,6 @@
+logs/
+__pycache__/
+*.pyc
+.env
+data/usage.json
+data/sprays.db

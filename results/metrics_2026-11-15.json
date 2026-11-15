@@ -1,0 +1,288 @@
+{
+ "stations": {
+  "az02": {
+   "name": "Yuma Valley",
+   "lat": 32.7118,
+   "lon": -114.7041,
+   "elev_m": 36,
+   "rows": 8759
+  },
+  "az14": {
+   "name": "Yuma N.Gila",
+   "lat": 32.7804,
+   "lon": -114.5163,
+   "elev_m": 43,
+   "rows": 8759
+  },
+  "az36": {
+   "name": "Yuma South",
+   "lat": 32.5655,
+   "lon": -114.744,
+   "elev_m": 28,
+   "rows": 8759
+  },
+  "az42": {
+   "name": "Wellton ETo",
+   "lat": 32.6932,
+   "lon": -114.0674,
+   "elev_m": 73,
+   "rows": 8759
+  },
+  "az24": {
+   "name": "Roll",
+   "lat": 32.7629,
+   "lon": -113.9675,
+   "elev_m": 81,
+   "rows": 8759
+  }
+ },
+ "n_rows": 43795,
+ "period": [
+  "2025-11-15 01:00:00",
+  "2026-11-14 23:00:00"
+ ],
+ "synthetic": false,
+ "loso": {
+  "wind_mae": {
+   "model": 1.5190498643323787,
+   "forecast_raw": 2.347181185066788,
+   "forecast_height_adj": 1.858381002397534,
+   "nearest_station": 1.8691403128210984
+  },
+  "temp_mae": {
+   "model": 2.1045312442504347,
+   "forecast_raw": 2.6264938919968035,
+   "nearest_station": 2.302952391825551
+  },
+  "dir_mae": {
+   "model": 23.91653340935095,
+   "forecast_raw": 25.900896253788122,
+   "nearest_station": 29.014765619962603
+  },
+  "window": {
+   "model": {
+    "accuracy": 0.7336225596529284,
+    "false_safe": 0.2847505693292657,
+    "said_ok": 0.531407694942345
+   },
+   "forecast_height_adj": {
+    "accuracy": 0.643315446968832,
+    "false_safe": 0.39253562061387964,
+    "said_ok": 0.6442287932412376
+   },
+   "nearest_station": {
+    "accuracy": 0.6909692887315904,
+    "false_safe": 0.30527019924506665,
+    "said_ok": 0.4778856033793812
+   }
+  },
+  "n": 43795,
+  "coverage_raw": 0.7173878296609202,
+  "coverage_calibrated": 0.8016668569471401,
+  "per_station": {
+   "az02": {
+    "name": "Yuma Valley",
+    "wind_mae_model": 1.5285076458082496,
+    "wind_mae_forecast": 1.8417644708300034,
+    "wind_mae_nearest": 1.9152871332343875,
+    "temp_mae_model": 2.0224639270036,
+    "nearest": "Yuma South"
+   },
+   "az14": {
+    "name": "Yuma N.Gila",
+    "wind_mae_model": 1.6606937394179007,
+    "wind_mae_forecast": 1.8489454275602237,
+    "wind_mae_nearest": 2.071583514099783,
+    "temp_mae_model": 1.9708841789639555,
+    "nearest": "Yuma Valley"
+   },
+   "az24": {
+    "name": "Roll",
+    "wind_mae_model": 1.4402250852640581,
+    "wind_mae_forecast": 1.838587966662861,
+    "wind_mae_nearest": 1.7217718917684668,
+    "temp_mae_model": 2.033171911845933,
+    "nearest": "Wellton ETo"
+   },
+   "az36": {
+    "name": "Yuma South",
+    "wind_mae_model": 1.446100252471777,
+    "wind_mae_forecast": 1.760519579860715,
+    "wind_mae_nearest": 1.9152871332343875,
+    "temp_mae_model": 2.482407405056462,
+    "nearest": "Yuma Valley"
+   },
+   "az42": {
+    "name": "Wellton ETo",
+    "wind_mae_model": 1.5197225986999086,
+    "wind_mae_forecast": 2.002087567073867,
+    "wind_mae_nearest": 1.7217718917684668,
+    "temp_mae_model": 2.0137287983822247,
+    "nearest": "Roll"
+   }
+  },
+  "reliability": [
+   {
+    "said": 0.05100594079231688,
+    "happened": 0.08695652173913043,
+    "n": 3036
+   },
+   {
+    "said": 0.1512865856583774,
+    "happened": 0.13696808510638298,
+    "n": 3760
+   },
+   {
+    "said": 0.24975232817372256,
+    "happened": 0.2171414891070146,
+    "n": 4177
+   },
+   {
+    "said": 0.3515889134640843,
+    "happened": 0.29160371249730194,
+    "n": 4633
+   },
+   {
+    "said": 0.44894801721522914,
+    "happened": 0.40724165988608624,
+    "n": 4916
+   },
+   {
+    "said": 0.5509505885565945,
+    "happened": 0.49878345498783455,
+    "n": 4521
+   },
+   {
+    "said": 0.6515129822098382,
+    "happened": 0.6211808809746954,
+    "n": 5335
+   },
+   {
+    "said": 0.7489092961337089,
+    "happened": 0.7463704740248382,
+    "n": 5717
+   },
+   {
+    "said": 0.8480848018900553,
+    "happened": 0.8519322622666088,
+    "n": 4606
+   },
+   {
+    "said": 0.9444468730186483,
+    "happened": 0.9327731092436975,
+    "n": 3094
+   }
+  ],
+  "high_conf": {
+   "share": 0.1758191574380637,
+   "happened": 0.8844155844155844
+  }
+ },
+ "lead": [
+  {
+   "lead_days": 0,
+   "wind_mae_model": 1.6566060133591238,
+   "wind_mae_forecast": 1.9781154753643304,
+   "temp_mae_model": 1.6129385638241365,
+   "temp_mae_forecast": 2.2096321998612076,
+   "window_accuracy": 0.7240804996530187,
+   "band_factor": 1.15,
+   "n": 7205
+  },
+  {
+   "lead_days": 1,
+   "wind_mae_model": 2.1234616193213247,
+   "wind_mae_forecast": 2.3945247252747253,
+   "temp_mae_model": 2.4265247618518324,
+   "temp_mae_forecast": 2.5144505494505496,
+   "window_accuracy": 0.6365384615384615,
+   "band_factor": 1.45,
+   "n": 7280
+  },
+  {
+   "lead_days": 2,
+   "wind_mae_model": 2.5866593080025106,
+   "wind_mae_forecast": 2.8099348901098904,
+   "temp_mae_model": 4.176848185182292,
+   "temp_mae_forecast": 5.044601648351648,
+   "window_accuracy": 0.5906593406593407,
+   "band_factor": 1.7,
+   "n": 7280
+  },
+  {
+   "lead_days": 3,
+   "wind_mae_model": 2.672566054746078,
+   "wind_mae_forecast": 2.8982361263736265,
+   "temp_mae_model": 4.413337715509007,
+   "temp_mae_forecast": 5.286758241758243,
+   "window_accuracy": 0.5756868131868131,
+   "band_factor": 1.8,
+   "n": 7280
+  }
+ ],
+ "calib": [
+  1.15,
+  1.45,
+  1.7,
+  1.8
+ ],
+ "nudge": [
+  {
+   "hours_ahead": 1,
+   "mae_without": 1.6566060133591236,
+   "mae_with": 1.62684798160786
+  },
+  {
+   "hours_ahead": 3,
+   "mae_without": 1.6566060133591236,
+   "mae_with": 1.6500983700579
+  },
+  {
+   "hours_ahead": 6,
+   "mae_without": 1.6566060133591236,
+   "mae_with": 1.6541323325533381
+  }
+ ],
+ "learning_curve": [
+  {
+   "months": 1,
+   "rows": 3600,
+   "wind_mae": 1.898662432866565,
+   "temp_mae": 8.14146376422516
+  },
+  {
+   "months": 2,
+   "rows": 7200,
+   "wind_mae": 1.8328165247921853,
+   "temp_mae": 7.817753637759618
+  },
+  {
+   "months": 4,
+   "rows": 14400,
+   "wind_mae": 1.7491674507796806,
+   "temp_mae": 2.1310277025433293
+  },
+  {
+   "months": 7,
+   "rows": 25200,
+   "wind_mae": 1.7182075625595,
+   "temp_mae": 1.6756842920734587
+  },
+  {
+   "months": 10,
+   "rows": 36000,
+   "wind_mae": 1.706421095166344,
+   "temp_mae": 1.6206468264462193
+  }
+ ],
+ "spec": {
+  "final_fit_seconds": 5.0,
+  "pipeline_seconds": 80.9,
+  "predict_ms_72h": 19.3,
+  "model_mb": 3.71,
+  "features": 30,
+  "algorithm": "Gradient-boosted trees (scikit-learn), 6 small models",
+  "data_cost_usd": 0.0
+ },
+ "trained_at": "2026-11-15 14:23"
+}

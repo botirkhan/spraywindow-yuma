@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SprayWindow Yuma</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+:root{--bg:#f3f0e8;--card:#fffdf8;--ink:#17261d;--mute:#5d6b62;--line:#e2dccd;--go:#2e7d4f;--go-bg:#e3f1e7;--ca:#c98205;--ca-bg:#fbefd2;--st:#bf3f2a;--st-bg:#f9e1dc;--accent:#1f5c3a;--field:#3d6b4f}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 "Segoe UI",system-ui,-apple-system,sans-serif}
+header{background:var(--accent);color:#fff;padding:14px 24px;display:flex;align-items:center;gap:18px;flex-wrap:wrap}
+header h1{margin:0;font-size:21px;letter-spacing:.2px;font-weight:650}
+header .sub{opacity:.8;font-size:13px}
+.badge{margin-left:auto;font-size:12px;padding:4px 10px;border-radius:99px;background:rgba(255,255,255,.16)}
+.badge.warn{background:#f4c542;color:#3a2c00;font-weight:700}
+nav{display:flex;gap:4px;padding:0 24px;background:#184a2e}
+nav button{background:none;border:0;color:#cfe3d6;padding:11px 16px;font:inherit;cursor:pointer;border-bottom:3px solid transparent}
+nav button.on{color:#fff;border-bottom-color:#f4c542;font-weight:600}
+main{max-width:1320px;margin:0 auto;padding:18px 24px 60px}
+.grid{display:grid;grid-template-columns:330px 1fr;gap:18px;align-items:start}
+@media(max-width:900px){.grid{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:16px}
+.card h2{margin:0 0 10px;font-size:13px;text-transform:uppercase;letter-spacing:.8px;color:var(--mute);font-weight:700}
+#map{height:260px;border-radius:8px;border:1px solid var(--line);background:#dfe8dc}
+label{display:block;font-size:12px;color:var(--mute);margin:10px 0 3px}
+input,select{width:100%;padding:8px 9px;border:1px solid #cfc8b6;border-radius:7px;font:inherit;background:#fff;color:var(--ink)}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+button.primary{width:100%;margin-top:14px;padding:11px;border:0;border-radius:8px;background:var(--accent);color:#fff;font:inherit;font-weight:600;cursor:pointer}
+button.primary:hover{background:#17472c}
+button.ghost{padding:8px 14px;border:1px solid var(--accent);border-radius:8px;background:#fff;color:var(--accent);font:inherit;font-weight:600;cursor:pointer}
+.now{display:grid;grid-template-columns:1.25fr 1fr;gap:0;padding:0;overflow:hidden}
+@media(max-width:800px){.now{grid-template-columns:1fr}}
+.now .big{padding:22px 24px;color:#fff}
+.now .big .lab{font-size:12px;letter-spacing:1px;text-transform:uppercase;opacity:.85}
+.now .big .word{font-size:64px;font-weight:800;line-height:1;margin:6px 0 4px;letter-spacing:1px}
+.now .big .conf{font-size:17px;font-weight:600}
+.now .big .why{margin-top:12px;font-size:15px;line-height:1.5}
+.now .side{padding:18px 20px}
+.GO{background:var(--go)}.CAUTION{background:var(--ca)}.STOP{background:var(--st)}
+.cmp{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+.cmp div{border:1px solid var(--line);border-radius:9px;padding:10px;text-align:center}
+.cmp .t{font-size:11px;color:var(--mute);text-transform:uppercase;letter-spacing:.6px}
+.cmp .v{font-size:22px;font-weight:800;margin-top:2px}
+.tGO{color:var(--go)}.tCAUTION{color:var(--ca)}.tSTOP{color:var(--st)}
+.kv{display:grid;grid-template-columns:1fr auto;gap:5px 12px;font-size:14px}
+.kv span:nth-child(odd){color:var(--mute)}
+.kv span:nth-child(even){font-weight:600;text-align:right}
+.advice{border-left:4px solid var(--accent);background:#eef4ee;padding:12px 14px;border-radius:0 8px 8px 0;font-size:15px}
+.advice small{display:block;color:var(--mute);margin-top:6px}
+.slots{display:grid;grid-template-columns:repeat(auto-fill,minmax(235px,1fr));gap:10px}
+.slot{border:1px solid #bcd9c5;background:var(--go-bg);border-radius:10px;padding:12px}
+.slot .d{font-size:12px;color:var(--mute);text-transform:uppercase;letter-spacing:.5px}
+.slot .t{font-size:19px;font-weight:750;margin:2px 0}
+.slot .bar{height:7px;background:#cfe3d5;border-radius:9px;margin:8px 0 4px;overflow:hidden}
+.slot .bar i{display:block;height:100%;background:var(--go)}
+.slot .m{font-size:13px;color:#33483b}
+.strip{display:grid;grid-template-columns:86px repeat(24,1fr);gap:2px;font-size:11px}
+.strip .hd{color:var(--mute);text-align:center}
+.strip .day{color:var(--ink);font-weight:600;font-size:12px;display:flex;align-items:center}
+.cell{height:30px;border-radius:4px;cursor:pointer;background:#ece7da;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:10px}
+.cell.GO{background:var(--go)}.cell.CAUTION{background:var(--ca)}.cell.STOP{background:var(--st)}
+.cell.sel{outline:3px solid var(--ink);outline-offset:1px}
+.cell.night{opacity:.82}
+.legend{display:flex;gap:16px;font-size:12px;color:var(--mute);margin-top:10px;flex-wrap:wrap}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:-2px;margin-right:5px}
+#detail{margin-top:12px;border:1px solid var(--line);border-radius:9px;padding:12px;background:#fff;font-size:14px}
+#detail ul{margin:6px 0 0;padding-left:18px}
+table{width:100%;border-collapse:collapse;font-size:13.5px}
+th{text-align:left;color:var(--mute);font-weight:600;font-size:12px;border-bottom:1px solid var(--line);padding:6px 8px}
+td{padding:7px 8px;border-bottom:1px solid #eee8da}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+.tile{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px}
+.tile .t{font-size:12px;color:var(--mute);text-transform:uppercase;letter-spacing:.6px}
+.tile .v{font-size:30px;font-weight:800;margin:4px 0 2px}
+.tile .s{font-size:13px;color:var(--mute)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:900px){.two{grid-template-columns:1fr}}
+.hbar{display:grid;grid-template-columns:170px 1fr 70px;gap:8px;align-items:center;margin:7px 0;font-size:13.5px}
+.hbar .b{height:16px;background:#ece7da;border-radius:5px;overflow:hidden}
+.hbar .b i{display:block;height:100%;background:#a9a595}
+.hbar.me .b i{background:var(--go)}
+.hbar.me{font-weight:700}
+.note{font-size:13px;color:var(--mute);margin-top:8px}
+.pill{display:inline-block;padding:2px 9px;border-radius:99px;font-size:12px;font-weight:700;color:#fff}
+.hide{display:none}
+.err{background:var(--st-bg);border:1px solid #e3a99d;color:#7a2416;padding:12px;border-radius:8px;margin-bottom:14px}
+svg text{font:11px "Segoe UI",system-ui,sans-serif;fill:#5d6b62}
+.spin{display:inline-block;width:14px;height:14px;border:2px solid #fff;border-top-color:transparent;border-radius:50%;animation:r 0.8s linear infinite;vertical-align:-2px;margin-right:6px}
+@keyframes r{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<header>
+  <div><h1>SprayWindow Yuma</h1><div class="sub">Field-specific spray timing from five AZMet stations, corrected forecasts and a learned confidence</div></div>
+  <span class="badge" id="srcBadge">loading…</span>
+</header>
+<nav>
+  <button data-tab="fc" class="on">Spray forecast</button>
+  <button data-tab="acc">Accuracy</button>
+  <button data-tab="log">Decision log</button>
+  <button data-tab="ai">AI &amp; cost</button>
+</nav>
+<main>
+<div id="err" class="err hide"></div>
+
+<section id="tab-fc">
+ <div class="grid">
+  <div>
+   <div class="card"><h2>Your field</h2>
+     <div id="map"></div>
+     <div class="note">Click the map to move the field. Blue dots are AZMet stations.</div>
+     <div class="row2"><div><label>Latitude</label><input id="lat" type="number" step="0.0001"></div><div><label>Longitude</label><input id="lon" type="number" step="0.0001"></div></div>
+     <div id="near" class="note"></div>
+   </div>
+   <div class="card"><h2>Spray limits</h2>
+     <div class="row2"><div><label>Min wind (mph)</label><input id="wmin" type="number" value="3" step="0.5"></div><div><label>Max wind (mph)</label><input id="wmax" type="number" value="10" step="0.5"></div></div>
+     <label>Confidence needed for "Go"</label>
+     <select id="conf"><option value="0.6">60%</option><option value="0.7" selected>70%</option><option value="0.8">80%</option><option value="0.9">90%</option></select>
+     <label>Sensitive area next to the field (crops, homes, water)</label>
+     <select id="avoid"><option value="none">None marked</option><option value="0">North side</option><option value="45">North-east</option><option value="90">East side</option><option value="135">South-east</option><option value="180">South side</option><option value="225">South-west</option><option value="270">West side</option><option value="315">North-west</option></select>
+     <button class="primary" id="go">Update forecast</button>
+     <div class="note">3–10 mph is common guidance. The product label always governs.</div>
+   </div>
+  </div>
+  <div>
+   <div class="card now" id="now"></div>
+   <div class="card"><h2>Advice</h2><div class="advice" id="advice"></div></div>
+   <div class="card"><h2>Safe spray windows · next 72 hours</h2><div class="slots" id="slots"></div></div>
+   <div class="card"><h2>Hour by hour</h2><div class="strip" id="strip"></div>
+     <div class="legend"><span><i style="background:var(--go)"></i>Go</span><span><i style="background:var(--ca)"></i>Caution</span><span><i style="background:var(--st)"></i>Stop</span><span>Number in each cell = confidence %. Click an hour for the reasons.</span></div>
+     <div id="detail"></div></div>
+   <div class="card"><h2>Wind at the field (mph) with uncertainty band</h2><div id="windChart"></div>
+     <div class="legend"><span><i style="background:#2e7d4f"></i>Most likely wind</span><span><i style="background:#bfdcc8"></i>Likely range (80%)</span><span><i style="background:#9aa39c"></i>Raw forecast, 10 m</span><span><i style="background:#bf3f2a"></i>Your limits</span></div></div>
+   <div class="card"><h2>Stations right now</h2><div id="stations"></div></div>
+  </div>
+ </div>
+</section>
+
+<section id="tab-acc" class="hide"></section>
+<section id="tab-log" class="hide"><div class="card"><h2>Time-stamped decision log</h2><p class="note" style="margin-top:0">Every forecast request is recorded with the readings and what triggered the status. <a href="/api/log.csv">Download CSV</a></p><div id="logTable" style="overflow:auto"></div></div></section>
+<section id="tab-ai" class="hide"></section>
+</main>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const $=id=>document.getElementById(id), S={meta:null,data:null,sel:0,map:null,marker:null};
+const f1=v=>v==null?'–':(+v).toFixed(1), f2=v=>v==null?'–':(+v).toFixed(2), pc=v=>v==null?'–':Math.round(v*100)+'%';
+const DAY=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'], MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const D=s=>new Date(s.replace(' ','T'));
+const hm=d=>{let h=d.getHours(),a=h<12?'AM':'PM';h=h%12||12;return h+':'+String(d.getMinutes()).padStart(2,'0')+' '+a};
+const dl=d=>DAY[d.getDay()]+' '+MON[d.getMonth()]+' '+d.getDate();
+const word={GO:'GO',CAUTION:'CAUTION',STOP:'STOP'};
+function showErr(m){const e=$('err');if(!m){e.classList.add('hide');return}e.textContent=m;e.classList.remove('hide')}
+
+document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{
+  document.querySelectorAll('nav button').forEach(x=>x.classList.toggle('on',x===b));
+  ['fc','acc','log','ai'].forEach(t=>$('tab-'+t).classList.toggle('hide',t!==b.dataset.tab));
+  if(b.dataset.tab==='log')loadLog(); if(b.dataset.tab==='ai')renderAI(); if(b.dataset.tab==='acc')renderAcc();
+  if(b.dataset.tab==='fc'&&S.map&&S.map.invalidateSize)S.map.invalidateSize();
+});
+
+async function init(){
+  try{S.meta=await (await fetch('/api/meta')).json()}catch(e){showErr('Cannot reach the app server.');return}
+  $('lat').value=S.meta.default.lat; $('lon').value=S.meta.default.lon;
+  initMap(); $('go').onclick=load;
+  $('lat').onchange=$('lon').onchange=()=>{moveMarker(+$('lat').value,+$('lon').value);load()};
+  load();
+}
+function initMap(){
+  const b=S.meta.bounds, st=S.meta.stations;
+  if(window.L){
+    S.map=L.map('map',{zoomControl:true,attributionControl:false}).setView([S.meta.default.lat,S.meta.default.lon],9);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:15}).addTo(S.map);
+    L.rectangle([[b.lat_min,b.lon_min],[b.lat_max,b.lon_max]],{color:'#1f5c3a',weight:1,fill:false,dashArray:'4'}).addTo(S.map);
+    st.forEach(s=>L.circleMarker([s.lat,s.lon],{radius:6,color:'#1b5e9c',fillColor:'#3c8ad6',fillOpacity:.9,weight:2}).addTo(S.map).bindTooltip(s.name));
+    S.marker=L.marker([S.meta.default.lat,S.meta.default.lon]).addTo(S.map);
+    S.map.on('click',e=>{setPoint(e.latlng.lat,e.latlng.lng)});
+  }else{ // offline fallback: simple drawn map
+    const W=298,H=258,x=l=>(l-b.lon_min)/(b.lon_max-b.lon_min)*W,y=l=>H-(l-b.lat_min)/(b.lat_max-b.lat_min)*H;
+    const draw=()=>{$('map').innerHTML=`<svg width="100%" viewBox="0 0 ${W} ${H}" style="cursor:crosshair"><rect width="${W}" height="${H}" fill="#e4ecdf"/>${st.map(s=>`<circle cx="${x(s.lon)}" cy="${y(s.lat)}" r="5" fill="#3c8ad6"/><text x="${x(s.lon)+7}" y="${y(s.lat)+4}">${s.name}</text>`).join('')}<circle cx="${x(+$('lon').value)}" cy="${y(+$('lat').value)}" r="7" fill="#bf3f2a" stroke="#fff" stroke-width="2"/></svg>`;
+      $('map').firstChild.onclick=e=>{const r=e.currentTarget.getBoundingClientRect();setPoint(b.lat_min+(1-(e.clientY-r.top)/r.height)*(b.lat_max-b.lat_min),b.lon_min+(e.clientX-r.left)/r.width*(b.lon_max-b.lon_min))}};
+    S.redraw=draw; draw();
+  }
+}
+function moveMarker(la,lo){if(S.marker)S.marker.setLatLng([la,lo]); if(S.redraw)S.redraw()}
+function setPoint(la,lo){$('lat').value=la.toFixed(4);$('lon').value=lo.toFixed(4);moveMarker(la,lo);load()}
+
+async function load(){
+  showErr(''); $('go').innerHTML='<span class="spin"></span>Working…';
+  const q=new URLSearchParams({lat:$('lat').value,lon:$('lon').value,wmin:$('wmin').value,wmax:$('wmax').value,conf:$('conf').value,avoid:$('avoid').value});
+  try{
+    const r=await fetch('/api/forecast?'+q), j=await r.json();
+    if(!r.ok||j.error){showErr(j.error||'Forecast failed.');return}
+    S.data=j; S.sel=0; render();
+  }catch(e){showErr('Forecast request failed: '+e)}finally{$('go').textContent='Update forecast'}
+}
+
+function render(){
+  const d=S.data,n=d.now,b=$('srcBadge');
+  b.textContent=(d.source==='live'||d.source==='cached'?'Live data':d.source)+' · updated '+hm(D(d.generated));
+  b.className='badge'+(/SIMULATED|saved/.test(d.source)?' warn':'');
+  $('near').innerHTML='Elevation '+(d.point.elev_m==null?'–':Math.round(d.point.elev_m*3.281)+' ft')+' · nearest stations: '+d.point.nearest.map(x=>x.name+' ('+Math.round(x.km*0.621)+' mi)').join(', ');
+  $('now').innerHTML=`<div class="big ${n.status}"><div class="lab">Right now at your field · ${hm(D(n.time))}</div><div class="word">${word[n.status]}</div>
+    <div class="conf">${Math.round(n.conf*100)}% confidence conditions are safe</div><div class="why">${n.reasons.map(r=>r.text).join(' ')}</div></div>
+    <div class="side"><div class="cmp"><div><div class="t">Single ground reading says</div><div class="v t${n.ground}">${word[n.ground]}</div></div><div><div class="t">SprayWindow says</div><div class="v t${n.status}">${word[n.status]}</div></div></div>
+    <div class="kv"><span>Wind at spray height</span><span>${f1(n.lo)}–${f1(n.hi)} mph from ${n.card}</span><span>Wind at 80 m</span><span>${f1(n.ws80)} mph</span>
+    <span>Temperature</span><span>${f1(n.temp)} °F</span><span>Air at 80 m vs ground</span><span>${n.dT>0?'+':''}${f1(n.dT)} °F ${n.dT>0?'(inversion)':''}</span>
+    <span>Inversion chance (estimate)</span><span>${pc(n.p_inv)}</span><span>Wind in range chance</span><span>${pc(n.p_wind)}</span></div></div>`;
+  $('advice').innerHTML=d.advice+(d.nudge?' <br><em>'+d.nudge+'</em>':'')+'<small>Written from the model\'s numbers by fixed templates. No chat model is connected.</small>';
+  $('slots').innerHTML=d.slots.length?d.slots.map(s=>{const a=D(s.start),e=D(s.end);return `<div class="slot"><div class="d">${dl(a)} · ${s.hours} hour${s.hours>1?'s':''}</div><div class="t">${hm(a)} – ${hm(e)}</div>
+    <div class="bar"><i style="width:${Math.round(s.conf*100)}%"></i></div><div class="m"><b>${Math.round(s.conf*100)}% confidence</b> (lowest hour ${Math.round(s.conf_min*100)}%)<br>Wind ${f1(s.ws_lo)}–${f1(s.ws_hi)} mph from ${s.card} · ${Math.round(s.temp_lo)}–${Math.round(s.temp_hi)} °F</div></div>`}).join(''):'<div class="note">No safe window in the next 72 hours with these limits.</div>';
+  renderStrip(); renderDetail(); renderWind(); renderStations();
+}
+function renderStrip(){
+  const hs=S.data.hours, days={};
+  hs.forEach((h,i)=>{const d=D(h.time),k=h.time.slice(0,10);(days[k]=days[k]||{label:dl(d),cells:{}}).cells[d.getHours()]={h,i}});
+  let html='<div></div>'+Array.from({length:24},(_,i)=>`<div class="hd">${i%3===0?((i%12||12)+(i<12?'a':'p')):''}</div>`).join('');
+  Object.values(days).forEach(dy=>{html+=`<div class="day">${dy.label}</div>`;for(let i=0;i<24;i++){const c=dy.cells[i];html+=c?`<div class="cell ${c.h.status}${c.h.night?' night':''}${c.i===S.sel?' sel':''}" data-i="${c.i}" title="${hm(D(c.h.time))}: ${c.h.status}, ${Math.round(c.h.conf*100)}%">${Math.round(c.h.conf*100)}</div>`:'<div class="cell" style="cursor:default;background:#f1ede2"></div>'}});
+  $('strip').innerHTML=html;
+  $('strip').querySelectorAll('.cell[data-i]').forEach(c=>c.onclick=()=>{S.sel=+c.dataset.i;renderStrip();renderDetail()});
+}
+function renderDetail(){
+  const h=S.data.hours[S.sel],d=D(h.time);
+  $('detail').innerHTML=`<b>${dl(d)}, ${hm(d)}</b> &nbsp;<span class="pill ${h.status}">${word[h.status]}</span> &nbsp;${Math.round(h.conf*100)}% confidence · wind ${f1(h.lo)}–${f1(h.hi)} mph from ${h.card} · ${f1(h.temp)} °F · inversion chance ${pc(h.p_inv)} · a single ground reading would say <b class="t${h.ground}">${word[h.ground]}</b><ul>${h.reasons.map(r=>'<li>'+r.text+'</li>').join('')}</ul>`;
+}
+function chart(el,o){ // o:{n,ymax,bands:[{lo,hi,color}],lines:[{v,color,w,dash}],hl:[{y,color,label}],xl:i=>label,h}
+  const W=o.w||900,H=o.h||230,L=40,R=10,T=10,B=24,x=i=>L+i/(o.n-1||1)*(W-L-R),y=v=>T+(1-(v-(o.ymin||0))/(o.ymax-(o.ymin||0)))*(H-T-B);
+  let s=`<svg viewBox="0 0 ${W} ${H}" width="100%">`;
+  for(let k=0;k<=4;k++){const v=(o.ymin||0)+k*(o.ymax-(o.ymin||0))/4;s+=`<line x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}" stroke="#ebe6d8"/><text x="${L-6}" y="${y(v)+4}" text-anchor="end">${(o.ymax-(o.ymin||0))<3?v.toFixed(2):(+v.toFixed(1))}</text>`}
+  (o.bands||[]).forEach(b=>{s+=`<path d="M${b.hi.map((v,i)=>x(i)+','+y(Math.min(v,o.ymax))).join('L')}L${b.lo.map((v,i)=>x(i)+','+y(v)).reverse().join('L')}Z" fill="${b.color}"/>`});
+  (o.hl||[]).forEach(h=>{s+=`<line x1="${L}" x2="${W-R}" y1="${y(h.y)}" y2="${y(h.y)}" stroke="${h.color}" stroke-dasharray="5 4"/><text x="${W-R-2}" y="${y(h.y)-4}" text-anchor="end" style="fill:${h.color}">${h.label}</text>`});
+  (o.lines||[]).forEach(l=>{s+=`<path d="M${l.v.map((v,i)=>x(i)+','+y(Math.min(Math.max(v,o.ymin||0),o.ymax))).join('L')}" fill="none" stroke="${l.color}" stroke-width="${l.w||2}" ${l.dash?'stroke-dasharray="'+l.dash+'"':''}/>`;if(l.dots)l.v.forEach((v,i)=>{s+=`<circle cx="${x(i)}" cy="${y(v)}" r="3.5" fill="${l.color}"/>`})});
+  for(let i=0;i<o.n;i++){const t=o.xl(i);if(t)s+=`<text x="${x(i)}" y="${H-7}" text-anchor="${i===0&&o.n<12?'start':(i===o.n-1&&o.n<12?'end':'middle')}">${t}</text>`}
+  el.innerHTML=s+'</svg>';
+}
+function renderWind(){
+  const hs=S.data.hours,st=S.data.settings,mx=Math.max(14,...hs.map(h=>h.hi))+1;
+  chart($('windChart'),{n:hs.length,ymax:mx,bands:[{lo:hs.map(h=>h.lo),hi:hs.map(h=>h.hi),color:'#bfdcc8'}],
+    lines:[{v:hs.map(h=>h.fc_ws10),color:'#9aa39c',w:1.3,dash:'3 3'},{v:hs.map(h=>h.ws),color:'#2e7d4f',w:2.4}],
+    hl:[{y:st.wmax,color:'#bf3f2a',label:'max '+st.wmax+' mph'},{y:st.wmin,color:'#bf3f2a',label:'min '+st.wmin+' mph'}],
+    xl:i=>{const d=D(hs[i].time);return d.getHours()===0?dl(d):(d.getHours()===12?'noon':'')}});
+}
+function renderStations(){
+  const d=S.data,st=d.stations||[];
+  if(!st.length){$('stations').innerHTML='<div class="note">Station readings are unavailable right now.</div>';return}
+  const me=d.now;
+  $('stations').innerHTML=`<p style="margin:0 0 10px">${d.spread.ws!=null?`The stations disagree by <b>${f1(d.spread.ws)} mph</b> and <b>${f1(d.spread.temp)} °F</b> right now. `:''}For your field the model estimates <b>${f1(me.ws)} mph from ${me.card}</b>, ${f1(me.temp)} °F.</p>
+   <table><tr><th>Station</th><th>Distance</th><th>Reading time</th><th class="num">Wind (mph)</th><th>From</th><th class="num">Temp (°F)</th><th class="num">Raw forecast there</th><th class="num">Our model there</th></tr>
+   ${st.map(s=>{const km=Math.hypot((s.lon-d.point.lon)*93.6,(s.lat-d.point.lat)*110.9);return `<tr><td>${s.name}</td><td>${Math.round(km*0.621)} mi</td><td>${s.time?hm(D(s.time)):'–'}</td><td class="num"><b>${f1(s.ws)}</b></td><td>${s.dir||'–'}</td><td class="num">${f1(s.temp)}</td><td class="num">${f1(s.fc_ws)}</td><td class="num">${f1(s.model_ws)}</td></tr>`}).join('')}</table>
+   <div class="note">Station wind is measured about 10 ft above ground. "Our model there" is what the model predicts at that station without using its own reading.</div>`;
+}
+function hbars(rows,unit,max){max=max||Math.max(...rows.map(r=>r.v||0))*1.1;return rows.map(r=>`<div class="hbar${r.me?' me':''}"><span>${r.n}</span><div class="b"><i style="width:${Math.min(100,(r.v||0)/max*100)}%"></i></div><span>${r.v==null?'–':f2(r.v)+unit}</span></div>`).join('')}
+function renderAcc(){
+  const m=S.meta.metrics,el=$('tab-acc');
+  if(!m){el.innerHTML='<div class="card">The model has not been trained yet.</div>';return}
+  const A=m.loso,w=A.wind_mae,t=A.temp_mae,dr=A.dir_mae,win=A.window,imp=w.forecast_height_adj?Math.round((1-w.model/w.forecast_height_adj)*100):null;
+  const lead=m.lead||[],lc=m.learning_curve||[],runs=S.meta.runs||[];
+  el.innerHTML=`${m.synthetic?'<div class="err">These numbers come from SIMULATED data and mean nothing. Retrain with real data.</div>':''}
+  <div class="tiles" style="margin-bottom:16px">
+   <div class="tile"><div class="t">Wind error at a location with no station</div><div class="v">${f2(w.model)} mph</div><div class="s">average miss, tested by hiding each station in turn</div></div>
+   <div class="tile"><div class="t">Versus the raw forecast</div><div class="v">${imp==null?'–':(imp>=0?imp+'% lower':Math.abs(imp)+'% higher')}</div><div class="s">forecast error ${f2(w.forecast_height_adj)} mph after height adjustment</div></div>
+   <div class="tile"><div class="t">"In range" calls correct</div><div class="v">${pc(win.model.accuracy)}</div><div class="s">was wind inside 3–10 mph, yes or no</div></div>
+   <div class="tile"><div class="t">When we say 80%+ confident</div><div class="v">${pc(A.high_conf.happened)}</div><div class="s">of those hours were actually in range (${pc(A.high_conf.share)} of all hours)</div></div>
+  </div>
+  <div class="two">
+   <div class="card"><h2>Wind speed error (mph, lower is better)</h2>${hbars([{n:'SprayWindow model',v:w.model,me:1},{n:'Forecast, height-adjusted',v:w.forecast_height_adj},{n:'Forecast, raw 10 m',v:w.forecast_raw},{n:'Nearest station reading',v:w.nearest_station}],'')}
+     <div class="note">"Nearest station reading" is what a grower gets by reading the closest station at the same moment. It only exists for the present; it cannot tell you about tomorrow.</div></div>
+   <div class="card"><h2>Temperature error (°F)</h2>${hbars([{n:'SprayWindow model',v:t.model,me:1},{n:'Forecast, raw',v:t.forecast_raw},{n:'Nearest station reading',v:t.nearest_station}],'')}
+     <h2 style="margin-top:16px">Wind direction error (degrees, wind over 5 mph)</h2>${hbars([{n:'SprayWindow model',v:dr.model,me:1},{n:'Forecast, raw',v:dr.forecast_raw},{n:'Nearest station reading',v:dr.nearest_station}],'°')}</div>
+  </div>
+  <div class="two">
+   <div class="card"><h2>Accuracy by how far ahead (last ${60} days, never seen in training)</h2><div id="leadChart"></div>
+     <table><tr><th>Days ahead</th><th class="num">Model wind error</th><th class="num">Forecast wind error</th><th class="num">Model temp error</th><th class="num">In-range calls correct</th></tr>
+     ${lead.map(l=>`<tr><td>${l.lead_days===0?'Same day':l.lead_days+' day'+(l.lead_days>1?'s':'')}</td><td class="num"><b>${f2(l.wind_mae_model)}</b></td><td class="num">${f2(l.wind_mae_forecast)}</td><td class="num">${f2(l.temp_mae_model)}</td><td class="num">${pc(l.window_accuracy)}</td></tr>`).join('')}</table>
+     <div class="note">Uses the forecasts as they were actually issued 1, 2 and 3 days earlier. The confidence band is widened by ${(m.calib||[]).map(c=>'×'+c).join(', ')} for 0–3 days ahead so it stays honest.</div></div>
+   <div class="card"><h2>Is the confidence honest?</h2><div id="relChart"></div><div class="note">Each dot: when the model said X% chance the wind is in range, how often it really was. Dots on the diagonal mean the confidence can be trusted. The 80% wind band contained the truth ${pc(A.coverage_raw)} of the time before calibration and ${pc(A.coverage_calibrated)} after.</div></div>
+  </div>
+  <div class="two">
+   <div class="card"><h2>It improves with more data</h2><div id="lcChart"></div><div class="note">Wind error on the same test period when trained on more months of history.${m.nudge&&m.nudge.length?' Using the latest readings at nearby stations changes the 1-hour-ahead error from '+f2(m.nudge[0].mae_without)+' to '+f2(m.nudge[0].mae_with)+' mph'+(m.nudge[0].mae_with<m.nudge[0].mae_without?' (switched on).':' (so it is switched off).'):''}</div>
+     <button class="ghost" id="retrain" style="margin-top:10px">Retrain now with the newest data</button> <span id="rtStatus" class="note"></span>
+     ${runs.length?'<table style="margin-top:10px"><tr><th>Trained</th><th class="num">Rows</th><th class="num">Wind error</th><th class="num">In-range correct</th></tr>'+runs.slice(-6).map(r=>`<tr><td>${r.trained_at}</td><td class="num">${r.rows.toLocaleString()}</td><td class="num">${f2(r.wind_mae)}</td><td class="num">${pc(r.window_accuracy)}</td></tr>`).join('')+'</table>':''}</div>
+   <div class="card"><h2>Per station (each one hidden in turn)</h2><table><tr><th>Hidden station</th><th class="num">Model</th><th class="num">Forecast</th><th class="num">Nearest station</th><th>Nearest was</th></tr>
+     ${Object.values(A.per_station).map(s=>`<tr><td>${s.name}</td><td class="num"><b>${f2(s.wind_mae_model)}</b></td><td class="num">${f2(s.wind_mae_forecast)}</td><td class="num">${f2(s.wind_mae_nearest)}</td><td>${s.nearest}</td></tr>`).join('')}</table>
+     <div class="note">Wind error in mph. Trained on ${m.n_rows.toLocaleString()} station-hours from ${m.period[0].slice(0,10)} to ${m.period[1].slice(0,10)}. Last trained ${m.trained_at}.</div>
+     <div class="note"><b>Limits:</b> AZMet stations measure temperature at one height, so the inversion chance is a rule-based estimate from forecast air temperature at 2 m and 80 m, not a measurement. A two-height sensor at the field would replace it. Tested on five stations; a location far from all of them will be less accurate.</div></div>
+  </div>`;
+  if(lead.length)chart($('leadChart'),{n:lead.length,ymax:Math.max(...lead.map(l=>Math.max(l.wind_mae_model,l.wind_mae_forecast)))*1.25,h:200,w:560,lines:[{v:lead.map(l=>l.wind_mae_forecast),color:'#9aa39c',dots:1},{v:lead.map(l=>l.wind_mae_model),color:'#2e7d4f',w:2.5,dots:1}],xl:i=>lead[i].lead_days===0?'same day':lead[i].lead_days+' d ahead'});
+  if(A.reliability&&A.reliability.length){const r=A.reliability;let s='<svg viewBox="0 0 300 250" width="100%" style="max-width:380px">';const X=v=>40+v*240,Y=v=>215-v*200;
+    for(let k=0;k<=4;k++){s+=`<line x1="40" x2="280" y1="${Y(k/4)}" y2="${Y(k/4)}" stroke="#ebe6d8"/><text x="34" y="${Y(k/4)+4}" text-anchor="end">${k*25}%</text><text x="${X(k/4)}" y="232" text-anchor="middle">${k*25}%</text>`}
+    s+=`<line x1="${X(0)}" y1="${Y(0)}" x2="${X(1)}" y2="${Y(1)}" stroke="#bbb" stroke-dasharray="4 4"/><path d="M${r.map(p=>X(p.said)+','+Y(p.happened)).join('L')}" fill="none" stroke="#2e7d4f" stroke-width="2"/>`+r.map(p=>`<circle cx="${X(p.said)}" cy="${Y(p.happened)}" r="4.5" fill="#2e7d4f"/>`).join('')+'<text x="160" y="248" text-anchor="middle">model said</text></svg>';$('relChart').innerHTML=s}
+  if(lc.length)chart($('lcChart'),{n:lc.length,ymin:Math.min(...lc.map(c=>c.wind_mae))*0.95,ymax:Math.max(...lc.map(c=>c.wind_mae))*1.05,h:190,w:560,lines:[{v:lc.map(c=>c.wind_mae),color:'#2e7d4f',w:2.5,dots:1}],xl:i=>lc[i].months+' mo'});
+  $('retrain').onclick=async()=>{await fetch('/api/retrain',{method:'POST'});pollTrain()};
+  if(S.meta.training&&S.meta.training.running)pollTrain();
+}
+async function pollTrain(){
+  const el=$('rtStatus');if(!el)return;el.textContent='Downloading newest data and retraining… (a few minutes)';
+  const t=setInterval(async()=>{const s=await (await fetch('/api/retrain/status')).json();if(!s.running){clearInterval(t);S.meta=await (await fetch('/api/meta')).json();renderAcc();const e=$('rtStatus');if(e)e.textContent=s.ok?'Retrained '+s.last+'.':'Retraining failed; the previous model is still in use.'}},4000);
+}
+async function loadLog(){
+  const rows=await (await fetch('/api/log')).json();
+  if(!rows.length){$('logTable').innerHTML='<div class="note">No entries yet.</div>';return}
+  const cols=[['logged_at','Logged at'],['lat','Lat'],['lon','Lon'],['status','Status'],['confidence_pct','Conf %'],['ground_station_view','Ground-only view'],['wind_mph','Wind'],['wind_low','Low'],['wind_high','High'],['wind_from','From'],['temp_f','Temp °F'],['temp_80m_minus_2m_f','80 m − 2 m °F'],['inversion_chance_pct','Inversion %'],['wind_80m_mph','Wind 80 m'],['triggers','What triggered it'],['next_window','Next safe window']];
+  $('logTable').innerHTML='<table><tr>'+cols.map(c=>'<th>'+c[1]+'</th>').join('')+'</tr>'+rows.map(r=>'<tr>'+cols.map(c=>c[0]==='status'?`<td><span class="pill ${r.status}">${r.status}</span></td>`:'<td>'+(r[c[0]]??'')+'</td>').join('')+'</tr>').join('')+'</table>';
+}
+function renderAI(){
+  const m=S.meta.metrics||{},sp=m.spec||{},u=S.data?S.data.usage:null;
+  const pin=+(localStorage.getItem('pin')||3),pout=+(localStorage.getItem('pout')||15);
+  const cost=(i,o)=>(i*pin+o*pout)/1e6;
+  $('tab-ai').innerHTML=`<div class="two"><div class="card"><h2>AI advice layer · estimate</h2>
+   <div class="err" style="background:var(--ca-bg);border-color:#e7c98a;color:#5c3d00">Estimate only: no chat model is connected. The advice text is produced by templates. These numbers show what a chat model would use to write the same advice.</div>
+   ${u?`<div class="kv"><span>Tokens in, this forecast (est.)</span><span>${u.this_call.in.toLocaleString()}</span><span>Tokens out, this forecast (est.)</span><span>${u.this_call.out.toLocaleString()}</span><span>Cost, this forecast (est.)</span><span>$${cost(u.this_call.in,u.this_call.out).toFixed(4)}</span>
+   <span>Forecasts served so far</span><span>${u.total.calls}</span><span>Total tokens (est.)</span><span>${(u.total.in+u.total.out).toLocaleString()}</span><span>Total cost (est.)</span><span>$${cost(u.total.in,u.total.out).toFixed(4)}</span>
+   <span>One field, hourly updates, 30 days (est.)</span><span>$${(cost(u.this_call.in,u.this_call.out)*24*30).toFixed(2)}</span></div>`:'<div class="note">Run a forecast first.</div>'}
+   <div class="row2"><div><label>Price per million input tokens ($)</label><input id="pin" type="number" step="0.1" value="${pin}"></div><div><label>Price per million output tokens ($)</label><input id="pout" type="number" step="0.1" value="${pout}"></div></div>
+   <div class="note">Prices are placeholders; enter your provider's current rates. Tokens are estimated as characters ÷ 4.</div></div>
+  <div class="card"><h2>The predictor itself · measured</h2><div class="kv">
+   <span>Type</span><span>${sp.algorithm||'–'}</span><span>Inputs per hour</span><span>${sp.features||'–'} variables</span><span>Training data</span><span>${m.n_rows?m.n_rows.toLocaleString()+' station-hours':'–'}</span>
+   <span>Time to train final model</span><span>${sp.final_fit_seconds??'–'} s</span><span>Whole pipeline incl. tests</span><span>${sp.pipeline_seconds??'–'} s</span><span>Time to predict 72 hours</span><span>${sp.predict_ms_72h??'–'} ms</span>
+   <span>Model size</span><span>${sp.model_mb??'–'} MB</span><span>Tokens used</span><span>0</span><span>Data cost</span><span>$0 (AZMet + Open-Meteo, free)</span><span>Runs on</span><span>this laptop, no GPU</span></div>
+   <div class="note">The predictor is a small statistical model, not a chat model, so it uses no tokens and costs nothing per forecast.</div>
+   <h2 style="margin-top:16px">How it works</h2><ol style="margin:0;padding-left:18px;font-size:14px"><li>Pull the hourly weather-model forecast for the exact field coordinates (2 m, 10 m and 80 m).</li><li>Add what the five AZMet stations have taught it: how real wind and temperature near that spot differ from the forecast at each hour of the day, weighted by distance.</li><li>Predict low, likely and high wind, temperature and direction for each hour.</li><li>Turn that into the chance the wind stays inside your limits, combine with the inversion estimate, and list the safe windows.</li></ol></div></div>`;
+  $('pin').onchange=$('pout').onchange=()=>{localStorage.setItem('pin',$('pin').value);localStorage.setItem('pout',$('pout').value);renderAI()};
+}
+init();
+</script>
+</body>
+</html>
